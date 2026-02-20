@@ -9,7 +9,20 @@ import type {
 
 const BASE = '/chat';
 
+type HealthResponse = {
+  status: string;
+};
+
 export const chatService = {
+  async isOnline(): Promise<boolean> {
+    try {
+      const health = await api.get<HealthResponse>('/health', { auth: false });
+      return health.status === 'healthy';
+    } catch {
+      return false;
+    }
+  },
+
   createSession(data?: ChatSessionCreate): Promise<ChatSessionResponse> {
     return api.post<ChatSessionResponse>(`${BASE}/sessions`, data ?? {}, { auth: false });
   },

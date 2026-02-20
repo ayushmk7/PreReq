@@ -10,14 +10,14 @@ const BASE = '/api/v1/exams';
 
 export const uploadService = {
   uploadScores(examId: string, file: File): Promise<ScoresUploadResponse> {
-    return api.upload<ScoresUploadResponse>(`${BASE}/${examId}/scores`, file);
+    return api.upload<ScoresUploadResponse>(`${BASE}/${examId}/scores`, file, { auth: false });
   },
 
   uploadMapping(examId: string, file: File): Promise<MappingUploadResponse> {
-    return api.upload<MappingUploadResponse>(`${BASE}/${examId}/mapping`, file);
+    return api.upload<MappingUploadResponse>(`${BASE}/${examId}/mapping`, file, { auth: false });
   },
 
   uploadGraph(examId: string, data: GraphUploadRequest): Promise<GraphUploadResponse> {
-    return api.post<GraphUploadResponse>(`${BASE}/${examId}/graph`, data);
+    return api.post<GraphUploadResponse>(`${BASE}/${examId}/graph`, data, { auth: false });
   },
 };

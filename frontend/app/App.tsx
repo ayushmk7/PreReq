@@ -6,7 +6,6 @@ import { RootCauseTrace } from './pages/RootCauseTrace';
 import { StudentReport } from './pages/StudentReport';
 import { Sidebar } from './components/Sidebar';
 import { Chatbot } from './components/Chatbot';
-import { setCredentials } from './services/apiClient';
 
 type View = 'landing' | 'upload' | 'dashboard' | 'trace' | 'student';
 
@@ -36,8 +35,7 @@ export default function App() {
   const [courseId, setCourseId] = useState<string | null>(null);
   const [examId, setExamId] = useState<string | null>(null);
 
-  const handleLogin = (username: string, password: string) => {
-    setCredentials(username, password);
+  const handleStart = () => {
     setCurrentView('upload');
   };
 
@@ -69,7 +67,7 @@ export default function App() {
       <div className="min-h-screen bg-background">
         <Sidebar currentView={currentView} onNavigate={handleNavigate} />
         <div className="pl-20">
-          {currentView === 'landing' && <LandingPage onLogin={handleLogin} />}
+          {currentView === 'landing' && <LandingPage onStart={handleStart} />}
           {currentView === 'upload' && <UploadWizard onComplete={handleUploadComplete} />}
           {currentView === 'dashboard' && <InstructorDashboard onConceptClick={handleConceptClick} />}
           {currentView === 'trace' && selectedConcept && examId && (

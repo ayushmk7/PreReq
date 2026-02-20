@@ -1,29 +1,21 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { motion } from 'motion/react';
 import { ConceptLensButton } from '../components/ConceptLensButton';
 import { Network, TrendingDown, Brain, Users, Target, LineChart, ArrowRight, Shield } from 'lucide-react';
 import { ImageWithFallback } from '../components/figma/ImageWithFallback';
-import { config } from '../services/config';
 
 interface LandingPageProps {
-  onLogin: (username: string, password: string) => void;
+  onStart: () => void;
 }
 
-export const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
-  const [username, setUsername] = useState(config.instructorUsername);
-  const [password, setPassword] = useState(config.instructorPassword);
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onLogin(username, password);
-  };
-
+export const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
   return (
     <div className="min-h-screen bg-background relative overflow-hidden">
       {/* Animated background elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute inset-0 bg-gradient-to-br from-[#FFCB05]/8 via-transparent to-[#00274C]/10" />
         {/* Grid pattern */}
-        <svg className="absolute inset-0 w-full h-full opacity-[0.03]">
+        <svg className="absolute inset-0 w-full h-full opacity-[0.080]">
           <defs>
             <pattern id="umich-grid" width="60" height="60" patternUnits="userSpaceOnUse">
               <path d="M 60 0 L 0 0 0 60" fill="none" stroke="#00274C" strokeWidth="1" />
@@ -34,10 +26,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
 
         {/* Abstract data visualization image */}
         <motion.div
-          className="absolute top-20 right-10 w-96 h-96 opacity-5"
+          className="absolute top-16 right-8 w-[34rem] h-[34rem] opacity-20"
           animate={{ 
-            y: [0, -30, 0],
-            rotate: [0, 3, 0]
+            y: [0, -40, 0],
+            rotate: [0, 5, 0]
           }}
           transition={{ 
             duration: 12, 
@@ -54,10 +46,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
 
         {/* Neural network pattern */}
         <motion.div
-          className="absolute bottom-32 left-10 w-80 h-80 opacity-5"
+          className="absolute bottom-24 left-8 w-[30rem] h-[30rem] opacity-20"
           animate={{ 
-            y: [0, 20, 0],
-            rotate: [0, -3, 0]
+            y: [0, 30, 0],
+            rotate: [0, -5, 0]
           }}
           transition={{ 
             duration: 10, 
@@ -73,43 +65,15 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
           />
         </motion.div>
 
-        {/* Animated concept graph SVG */}
-        <motion.div 
-          className="absolute top-1/3 right-1/4 opacity-10"
-          animate={{ 
-            y: [0, -20, 0],
-            rotate: [0, 5, 0]
-          }}
-          transition={{ 
-            duration: 8, 
-            repeat: Infinity,
-            ease: 'easeInOut'
-          }}
-        >
-          <svg width="400" height="300" viewBox="0 0 400 300">
-            <circle cx="100" cy="50" r="20" fill="none" stroke="#FFCB05" strokeWidth="2.5" opacity="0.6" />
-            <circle cx="200" cy="50" r="20" fill="none" stroke="#FFCB05" strokeWidth="2.5" opacity="0.6" />
-            <circle cx="150" cy="130" r="20" fill="none" stroke="#00274C" strokeWidth="2" opacity="0.6" />
-            <circle cx="250" cy="130" r="20" fill="none" stroke="#00274C" strokeWidth="2" opacity="0.6" />
-            <circle cx="200" cy="220" r="20" fill="none" stroke="#FFCB05" strokeWidth="2.5" opacity="0.6" />
-            
-            <line x1="100" y1="70" x2="150" y2="110" stroke="#00274C" strokeWidth="2" opacity="0.3" />
-            <line x1="200" y1="70" x2="150" y2="110" stroke="#00274C" strokeWidth="2" opacity="0.3" />
-            <line x1="200" y1="70" x2="250" y2="110" stroke="#00274C" strokeWidth="2" opacity="0.3" />
-            <line x1="150" y1="150" x2="200" y2="200" stroke="#FFCB05" strokeWidth="2.5" opacity="0.4" />
-            <line x1="250" y1="150" x2="200" y2="200" stroke="#FFCB05" strokeWidth="2.5" opacity="0.4" />
-          </svg>
-        </motion.div>
-
         {/* Maize accent circles */}
         <motion.div
-          className="absolute top-1/4 left-1/3 w-64 h-64 rounded-full bg-[#FFCB05] opacity-[0.02] blur-3xl"
-          animate={{ scale: [1, 1.2, 1] }}
+          className="absolute top-1/4 left-1/3 w-72 h-72 rounded-full bg-[#FFCB05] opacity-[0.18] blur-3xl"
+          animate={{ scale: [1, 1.3, 1] }}
           transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut' }}
         />
         <motion.div
-          className="absolute bottom-1/4 right-1/3 w-96 h-96 rounded-full bg-[#00274C] opacity-[0.02] blur-3xl"
-          animate={{ scale: [1.2, 1, 1.2] }}
+          className="absolute bottom-1/4 right-1/3 w-[30rem] h-[30rem] rounded-full bg-[#00274C] opacity-[0.14] blur-3xl"
+          animate={{ scale: [1.25, 1, 1.25] }}
           transition={{ duration: 10, repeat: Infinity, ease: 'easeInOut' }}
         />
       </div>
@@ -146,40 +110,26 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
                 
                 <p className="text-xl text-foreground-secondary leading-relaxed max-w-2xl mx-auto">
                   PreReq analyzes student assessment data to reveal conceptual weaknesses, 
-                  prerequisite gaps, and personalized intervention strategies—backed by dependency-aware AI.
+                  prerequisite gaps, and personalized intervention strategies backed by dependency-aware AI.
                 </p>
               </motion.div>
 
-              <motion.form
+              <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3, duration: 0.8 }}
-                className="flex flex-wrap gap-3 justify-center items-end pt-4"
-                onSubmit={handleSubmit}
+                className="flex justify-center pt-4"
               >
-                <input
-                  type="text"
-                  placeholder="Username"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  className="px-4 py-3 rounded-xl border border-border bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#FFCB05] w-40"
-                />
-                <input
-                  type="password"
-                  placeholder="Password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="px-4 py-3 rounded-xl border border-border bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#FFCB05] w-40"
-                />
                 <ConceptLensButton 
                   variant="primary" 
-                  type="submit"
+                  type="button"
+                  onClick={onStart}
                   className="px-8 py-3 text-lg group inline-flex items-center justify-center"
                 >
                   Start Now
                   <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                 </ConceptLensButton>
-              </motion.form>
+              </motion.div>
 
               <motion.div
                 initial={{ opacity: 0 }}
@@ -308,53 +258,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
           </div>
         </div>
 
-        {/* Stats Section */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 1.2, duration: 0.8 }}
-          className="px-4 py-20 border-t border-border"
-        >
-          <div className="max-w-6xl mx-auto">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-              <motion.div 
-                className="text-center space-y-2"
-                whileHover={{ scale: 1.05 }}
-              >
-                <div className="text-4xl text-[#00274C]">98%</div>
-                <div className="text-sm text-foreground-secondary">Prediction Accuracy</div>
-              </motion.div>
-              <motion.div 
-                className="text-center space-y-2"
-                whileHover={{ scale: 1.05 }}
-              >
-                <div className="text-4xl text-[#00274C]">15min</div>
-                <div className="text-sm text-foreground-secondary">Average Analysis Time</div>
-              </motion.div>
-              <motion.div 
-                className="text-center space-y-2"
-                whileHover={{ scale: 1.05 }}
-              >
-                <div className="text-4xl text-[#00274C]">50K+</div>
-                <div className="text-sm text-foreground-secondary">Students Analyzed</div>
-              </motion.div>
-              <motion.div 
-                className="text-center space-y-2"
-                whileHover={{ scale: 1.05 }}
-              >
-                <div className="text-4xl text-[#00274C]">200+</div>
-                <div className="text-sm text-foreground-secondary">Institutions</div>
-              </motion.div>
-            </div>
-          </div>
-        </motion.div>
-
         {/* Footer */}
         <div className="px-4 py-12 border-t border-border">
           <div className="max-w-6xl mx-auto">
             <div className="flex flex-col md:flex-row justify-between items-center gap-6">
               <p className="text-sm text-foreground-secondary">
-                PreReq © 2026 — AI-Powered Assessment Intelligence for Higher Education
+                PreReq © 2026 - AI-Powered Assessment Intelligence for Higher Education
               </p>
               <div className="flex gap-6 text-sm text-foreground-secondary">
                 <a href="#" className="hover:text-[#FFCB05] transition-colors">Privacy Policy</a>

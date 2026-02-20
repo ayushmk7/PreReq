@@ -5,14 +5,14 @@ const BASE = '/api/v1/courses';
 
 export const examsService = {
   list(courseId: string): Promise<ExamResponse[]> {
-    return api.get<ExamResponse[]>(`${BASE}/${courseId}/exams`);
+    return api.get<ExamResponse[]>(`${BASE}/${courseId}/exams`, { auth: false });
   },
 
   get(examId: string): Promise<ExamResponse> {
-    return api.get<ExamResponse>(`/api/v1/exams/${examId}`);
+    return api.get<ExamResponse>(`/api/v1/exams/${examId}`, { auth: false });
   },
 
   create(courseId: string, data: ExamCreate): Promise<ExamResponse> {
-    return api.post<ExamResponse>(`${BASE}/${courseId}/exams`, data);
+    return api.post<ExamResponse>(`${BASE}/${courseId}/exams`, data, { auth: false });
   },
 };

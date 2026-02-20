@@ -55,7 +55,7 @@ logging.basicConfig(
 app = FastAPI(
     title="ConceptLens API",
     description=(
-        "Backend API for ConceptLens — a concept readiness analysis platform "
+        "Backend API for ConceptLens - a concept readiness analysis platform "
         "for instructors and students. Computes per-student concept readiness "
         "scores using a DAG-based inference engine, provides instructor "
         "dashboards with heatmaps and root-cause tracing, generates "

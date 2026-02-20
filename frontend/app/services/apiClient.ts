@@ -1,24 +1,5 @@
 import { config } from './config';
 
-let _credentials: { username: string; password: string } = {
-  username: config.instructorUsername,
-  password: config.instructorPassword,
-};
-
-export function setCredentials(username: string, password: string) {
-  _credentials = { username, password };
-}
-
-export function getCredentials() {
-  return _credentials;
-}
-
-function authHeader(): string {
-  const { username, password } = _credentials;
-  if (!username) return '';
-  return 'Basic ' + btoa(`${username}:${password}`);
-}
-
 export class ApiError extends Error {
   status: number;
   detail: string;
@@ -66,12 +47,13 @@ function buildUrl(path: string, params?: Record<string, string | undefined>): st
 }
 
 function headers(auth: boolean): HeadersInit {
-  const h: Record<string, string> = {};
-  if (auth) {
-    const a = authHeader();
-    if (a) h['Authorization'] = a;
-  }
-  return h;
+  void auth;
+  const username = config.instructorUsername.trim();
+  if (!username) return {};
+  const password = config.instructorPassword ?? '';
+  return {
+    Authorization: `Basic ${btoa(`${username}:${password}`)}`,
+  };
 }
 
 export const api = {

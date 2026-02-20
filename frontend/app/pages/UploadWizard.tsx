@@ -23,6 +23,17 @@ const steps = [
   { id: 4, name: 'Compute', icon: Zap },
 ];
 
+const DEFAULT_WIZARD_COURSES = [
+  {
+    name: 'EECS203 Discrete Maths',
+    exams: ['Midterm', 'Final'],
+  },
+  {
+    name: 'EECS280 Intro to Data Structures',
+    exams: ['Midterm', 'Final'],
+  },
+];
+
 export const UploadWizard: React.FC<UploadWizardProps> = ({ onComplete }) => {
   const [currentStep, setCurrentStep] = useState(1);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -35,6 +46,8 @@ export const UploadWizard: React.FC<UploadWizardProps> = ({ onComplete }) => {
   const [selectedExamId, setSelectedExamId] = useState<string>('');
   const [newCourseName, setNewCourseName] = useState('');
   const [newExamName, setNewExamName] = useState('');
+  const [isCreatingCourse, setIsCreatingCourse] = useState(false);
+  const [isCreatingExam, setIsCreatingExam] = useState(false);
 
   // Step 1 — scores
   const [scoresFile, setScoresFile] = useState<File | null>(null);
@@ -55,7 +68,40 @@ export const UploadWizard: React.FC<UploadWizardProps> = ({ onComplete }) => {
   const [computeResult, setComputeResult] = useState<ComputeResponse | null>(null);
 
   useEffect(() => {
-    coursesService.list().then(setCourses).catch(() => {});
+    let isMounted = true;
+
+    const normalize = (value: string) => value.trim().toLowerCase();
+
+    const ensureDefaults = async () => {
+      let existingCourses = await coursesService.list();
+
+      for (const defaultCourse of DEFAULT_WIZARD_COURSES) {
+        const matchedCourse =
+          existingCourses.find((course) => normalize(course.name) === normalize(defaultCourse.name)) ??
+          (await coursesService.create({ name: defaultCourse.name }));
+
+        const existingExams = await examsService.list(matchedCourse.id);
+        for (const defaultExam of defaultCourse.exams) {
+          const examExists = existingExams.some(
+            (exam) => normalize(exam.name) === normalize(defaultExam),
+          );
+          if (!examExists) {
+            await examsService.create(matchedCourse.id, { name: defaultExam });
+          }
+        }
+      }
+
+      existingCourses = await coursesService.list();
+      if (isMounted) {
+        setCourses(existingCourses);
+      }
+    };
+
+    ensureDefaults().catch(() => {});
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   useEffect(() => {
@@ -83,6 +129,67 @@ export const UploadWizard: React.FC<UploadWizardProps> = ({ onComplete }) => {
     }
     if (!eId) throw new Error('Please select or create an exam first.');
     return { courseId: cId, examId: eId };
+  };
+
+  const handleCreateCourse = async () => {
+    const courseName = newCourseName.trim();
+    if (!courseName) {
+      setError('Please enter a course name.');
+      return;
+    }
+
+    setError(null);
+    setIsCreatingCourse(true);
+    try {
+      const createdCourse = await coursesService.create({ name: courseName });
+      const refreshedCourses = await coursesService.list();
+      setCourses(refreshedCourses);
+      setSelectedCourseId(createdCourse.id);
+      setSelectedExamId('');
+      setExams([]);
+      setNewCourseName('');
+      setNewExamName('');
+    } catch (e) {
+      setError(e instanceof ApiError ? e.detail : String(e));
+    } finally {
+      setIsCreatingCourse(false);
+    }
+  };
+
+  const handleCreateExam = async () => {
+    const examName = newExamName.trim();
+    if (!examName) {
+      setError('Please enter an exam name.');
+      return;
+    }
+
+    setError(null);
+    setIsCreatingExam(true);
+    try {
+      let courseId = selectedCourseId;
+      if (!courseId && newCourseName.trim()) {
+        const createdCourse = await coursesService.create({ name: newCourseName.trim() });
+        courseId = createdCourse.id;
+        setSelectedCourseId(courseId);
+        setNewCourseName('');
+        const refreshedCourses = await coursesService.list();
+        setCourses(refreshedCourses);
+      }
+
+      if (!courseId) {
+        throw new Error('Please select or create a course before creating an exam.');
+      }
+
+      const createdExam = await examsService.create(courseId, { name: examName });
+      const refreshedExams = await examsService.list(courseId);
+      setExams(refreshedExams);
+      setSelectedExamId(createdExam.id);
+      setNewExamName('');
+    } catch (e) {
+      setError(e instanceof ApiError ? e.detail : String(e));
+    } finally {
+      setIsCreatingExam(false);
+    }
   };
 
   const handleUploadScores = async () => {
@@ -237,6 +344,14 @@ export const UploadWizard: React.FC<UploadWizardProps> = ({ onComplete }) => {
                 onChange={(e) => { setNewCourseName(e.target.value); setSelectedCourseId(''); }}
                 className="w-full mt-1 bg-surface border border-border rounded-lg px-3 py-1.5 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-[#FFCB05]"
               />
+              <button
+                type="button"
+                onClick={handleCreateCourse}
+                disabled={isCreatingCourse || !newCourseName.trim()}
+                className="mt-2 text-xs px-3 py-1.5 rounded-md bg-[#00274C] text-white hover:bg-[#001a33] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {isCreatingCourse ? 'Creating Course...' : 'Create New Course'}
+              </button>
             </div>
             <div className="flex-1">
               <label className="text-xs text-foreground-secondary mb-1 block">Exam</label>
@@ -255,6 +370,14 @@ export const UploadWizard: React.FC<UploadWizardProps> = ({ onComplete }) => {
                 onChange={(e) => { setNewExamName(e.target.value); setSelectedExamId(''); }}
                 className="w-full mt-1 bg-surface border border-border rounded-lg px-3 py-1.5 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-[#FFCB05]"
               />
+              <button
+                type="button"
+                onClick={handleCreateExam}
+                disabled={isCreatingExam || !newExamName.trim()}
+                className="mt-2 text-xs px-3 py-1.5 rounded-md bg-[#00274C] text-white hover:bg-[#001a33] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {isCreatingExam ? 'Creating Exam...' : 'Create New Exam'}
+              </button>
             </div>
           </div>
 
