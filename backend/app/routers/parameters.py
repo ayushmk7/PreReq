@@ -31,9 +31,8 @@ async def get_parameters(
     params = p_result.scalar_one_or_none()
 
     if not params:
-        # Return defaults
         return ParametersResponse(
-            alpha=1.0, beta=0.3, gamma=0.2, threshold=0.6,
+            alpha=1.0, beta=0.3, gamma=0.2, threshold=0.6, k=4,
         )
 
     return ParametersResponse(
@@ -41,6 +40,7 @@ async def get_parameters(
         beta=params.beta,
         gamma=params.gamma,
         threshold=params.threshold,
+        k=params.k,
     )
 
 
@@ -73,6 +73,7 @@ async def update_parameters(
     params.beta = body.beta
     params.gamma = body.gamma
     params.threshold = body.threshold
+    params.k = body.k
     await db.flush()
     await db.refresh(params)
 
@@ -82,4 +83,5 @@ async def update_parameters(
         beta=params.beta,
         gamma=params.gamma,
         threshold=params.threshold,
+        k=params.k,
     )

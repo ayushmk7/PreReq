@@ -1,20 +1,56 @@
 """Student report endpoint: API-09 — token-based access, no auth required."""
 
+from datetime import timedelta
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.auth import get_current_instructor
+from app.config import settings
 from app.database import get_db
-from app.models.models import ConceptGraph, ReadinessResult, StudentToken
-from app.schemas.schemas import StudentReportResponse
+from app.models.models import ConceptGraph, Exam, ReadinessResult, StudentToken
+from app.schemas.schemas import (
+    StudentReportResponse,
+    StudentTokenItem,
+    StudentTokenListResponse,
+)
 from app.services.report_service import build_student_report, is_token_expired
 
-router = APIRouter(prefix="/api/v1/reports", tags=["Reports"])
+router = APIRouter(tags=["Reports"])
 
 
-@router.get("/{token}", response_model=StudentReportResponse)
+@router.get("/api/v1/exams/{exam_id}/reports/tokens", response_model=StudentTokenListResponse)
+async def list_report_tokens(
+    exam_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    _user: str = Depends(get_current_instructor),
+):
+    """List all student report tokens for an exam (instructor only)."""
+    result = await db.execute(select(Exam).where(Exam.id == exam_id))
+    if not result.scalar_one_or_none():
+        raise HTTPException(status_code=404, detail="Exam not found")
+
+    t_result = await db.execute(
+        select(StudentToken).where(StudentToken.exam_id == exam_id)
+    )
+    rows = t_result.scalars().all()
+
+    expiry_days = settings.STUDENT_TOKEN_EXPIRY_DAYS
+    items = [
+        StudentTokenItem(
+            student_id=t.student_id_external,
+            token=str(t.token),
+            created_at=t.created_at,
+            expires_at=t.created_at + timedelta(days=expiry_days),
+        )
+        for t in rows
+    ]
+    return StudentTokenListResponse(tokens=items)
+
+
+@router.get("/api/v1/reports/{token}", response_model=StudentReportResponse)
 async def get_student_report(
     token: str,
     db: AsyncSession = Depends(get_db),

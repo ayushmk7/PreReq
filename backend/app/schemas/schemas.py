@@ -8,6 +8,23 @@ from pydantic import BaseModel, Field
 
 
 # ---------------------------------------------------------------------------
+# Standardized Error Envelope
+# ---------------------------------------------------------------------------
+
+class ValidationError(BaseModel):
+    row: Optional[int] = None
+    field: Optional[str] = None
+    message: str
+
+
+class ErrorResponse(BaseModel):
+    status: str = "error"
+    code: str = "VALIDATION_ERROR"
+    message: str = ""
+    errors: list[ValidationError] = []
+
+
+# ---------------------------------------------------------------------------
 # Course
 # ---------------------------------------------------------------------------
 
@@ -43,13 +60,6 @@ class ExamResponse(BaseModel):
 # ---------------------------------------------------------------------------
 # Upload Responses
 # ---------------------------------------------------------------------------
-
-class ValidationError(BaseModel):
-    """A single validation error with location detail."""
-    row: Optional[int] = None
-    field: Optional[str] = None
-    message: str
-
 
 class ScoresUploadResponse(BaseModel):
     status: str
@@ -113,11 +123,14 @@ class ComputeRequest(BaseModel):
     beta: float = 0.3
     gamma: float = 0.2
     threshold: float = 0.6
+    k: int = 4
 
 
 class ComputeResponse(BaseModel):
     status: str
+    run_id: Optional[UUID] = None
     students_processed: int = 0
+    concepts_processed: int = 0
     time_ms: float = 0.0
 
 
@@ -128,7 +141,7 @@ class ComputeResponse(BaseModel):
 class HeatmapCell(BaseModel):
     concept_id: str
     concept_label: str
-    bucket: str  # e.g. "0-20", "20-40", ...
+    bucket: str
     count: int
     percentage: float
 
@@ -254,6 +267,23 @@ class StudentReportResponse(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# Report Tokens (instructor-facing token list)
+# ---------------------------------------------------------------------------
+
+class StudentTokenItem(BaseModel):
+    student_id: str
+    token: str
+    created_at: datetime
+    expires_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class StudentTokenListResponse(BaseModel):
+    tokens: list[StudentTokenItem] = []
+
+
+# ---------------------------------------------------------------------------
 # Parameters
 # ---------------------------------------------------------------------------
 
@@ -262,6 +292,7 @@ class ParametersSchema(BaseModel):
     beta: float = Field(0.3, ge=0.0, le=5.0)
     gamma: float = Field(0.2, ge=0.0, le=5.0)
     threshold: float = Field(0.6, ge=0.0, le=1.0)
+    k: int = Field(4, ge=2, le=20)
 
 
 class ParametersResponse(BaseModel):
@@ -270,5 +301,231 @@ class ParametersResponse(BaseModel):
     beta: float
     gamma: float
     threshold: float
+    k: int = 4
 
     model_config = {"from_attributes": True}
+
+
+# ---------------------------------------------------------------------------
+# Intervention Results
+# ---------------------------------------------------------------------------
+
+class InterventionItem(BaseModel):
+    concept_id: str
+    students_affected: int
+    downstream_concepts: int
+    current_readiness: float
+    impact: float
+    rationale: str
+    suggested_format: str
+
+
+class InterventionsResponse(BaseModel):
+    interventions: list[InterventionItem] = []
+
+
+# ---------------------------------------------------------------------------
+# AI Suggestions
+# ---------------------------------------------------------------------------
+
+class ConceptTagSuggestion(BaseModel):
+    concept_id: str
+    confidence: float = Field(..., ge=0.0, le=1.0)
+    rationale: str
+
+
+class ConceptTagRequest(BaseModel):
+    question_text: str
+    concept_catalog: list[str] = []
+
+
+class ConceptTagResponse(BaseModel):
+    request_id: UUID
+    suggestion_id: UUID
+    suggestions: list[ConceptTagSuggestion] = []
+    model: str = ""
+    prompt_version: str = ""
+
+
+class PrereqEdgeSuggestion(BaseModel):
+    source: str
+    target: str
+    weight: float = Field(0.5, ge=0.0, le=1.0)
+    rationale: str
+
+
+class PrereqEdgeRequest(BaseModel):
+    concepts: list[str]
+    context: str = ""
+
+
+class PrereqEdgeResponse(BaseModel):
+    request_id: UUID
+    suggestion_id: UUID
+    suggestions: list[PrereqEdgeSuggestion] = []
+    model: str = ""
+    prompt_version: str = ""
+
+
+class InterventionDraftRequest(BaseModel):
+    cluster_centroid: dict[str, float]
+    weak_concepts: list[str]
+    student_count: int = 0
+
+
+class InterventionDraftItem(BaseModel):
+    concept_id: str
+    intervention_type: str
+    description: str
+    rationale: str
+
+
+class InterventionDraftResponse(BaseModel):
+    request_id: UUID
+    suggestion_id: UUID
+    drafts: list[InterventionDraftItem] = []
+    model: str = ""
+    prompt_version: str = ""
+
+
+# ---------------------------------------------------------------------------
+# AI Suggestion Review
+# ---------------------------------------------------------------------------
+
+class SuggestionReviewAction(BaseModel):
+    action: str = Field(..., pattern="^(accept|reject)$")
+    note: str = ""
+
+
+class BulkReviewRequest(BaseModel):
+    suggestion_ids: list[UUID]
+    action: str = Field(..., pattern="^(accept|reject)$")
+    note: str = ""
+
+
+class SuggestionListItem(BaseModel):
+    id: UUID
+    suggestion_type: str
+    status: str
+    output_payload: dict[str, Any]
+    validation_errors: Optional[list[dict[str, Any]]] = None
+    model: Optional[str] = None
+    prompt_version: Optional[str] = None
+    reviewed_by: Optional[str] = None
+    reviewed_at: Optional[datetime] = None
+    review_note: Optional[str] = None
+    created_at: datetime
+
+
+class SuggestionListResponse(BaseModel):
+    suggestions: list[SuggestionListItem] = []
+    total: int = 0
+    pending: int = 0
+    accepted: int = 0
+    rejected: int = 0
+    applied: int = 0
+
+
+class ApplySuggestionsRequest(BaseModel):
+    suggestion_ids: list[UUID]
+
+
+class ApplySuggestionsResponse(BaseModel):
+    status: str
+    applied_count: int = 0
+    errors: list[str] = []
+
+
+# ---------------------------------------------------------------------------
+# Export
+# ---------------------------------------------------------------------------
+
+class ExportRequest(BaseModel):
+    compute_run_id: Optional[UUID] = None
+
+
+class ExportStatusResponse(BaseModel):
+    id: UUID
+    exam_id: UUID
+    status: str
+    file_checksum: Optional[str] = None
+    manifest: Optional[dict[str, Any]] = None
+    created_at: datetime
+    completed_at: Optional[datetime] = None
+    error_message: Optional[str] = None
+
+
+class ExportListResponse(BaseModel):
+    exports: list[ExportStatusResponse] = []
+
+
+# ---------------------------------------------------------------------------
+# Health
+# ---------------------------------------------------------------------------
+
+class HealthResponse(BaseModel):
+    status: str
+    service: str
+    database: str = "unknown"
+    openai: str = "unknown"
+
+
+# ---------------------------------------------------------------------------
+# Compute Runs
+# ---------------------------------------------------------------------------
+
+class ComputeRunResponse(BaseModel):
+    id: UUID
+    run_id: UUID
+    exam_id: UUID
+    status: str
+    students_processed: Optional[int] = None
+    concepts_processed: Optional[int] = None
+    parameters: Optional[dict[str, Any]] = None
+    graph_version: Optional[int] = None
+    duration_ms: Optional[float] = None
+    error_message: Optional[str] = None
+    created_at: datetime
+    completed_at: Optional[datetime] = None
+
+    model_config = {"from_attributes": True}
+
+
+# ---------------------------------------------------------------------------
+# Chat (agentic AI assistant)
+# ---------------------------------------------------------------------------
+
+class ChatSessionCreate(BaseModel):
+    exam_id: Optional[UUID] = None
+    title: str = ""
+
+
+class ChatSessionResponse(BaseModel):
+    id: UUID
+    exam_id: Optional[UUID] = None
+    title: Optional[str] = None
+    created_by: str
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class ChatMessageResponse(BaseModel):
+    id: UUID
+    role: str
+    content: Optional[str] = None
+    tool_calls: Optional[list[dict[str, Any]]] = None
+    tool_name: Optional[str] = None
+    created_at: datetime
+
+
+class ChatSendRequest(BaseModel):
+    message: str = Field(..., min_length=1, max_length=10000)
+    exam_id: Optional[UUID] = None
+
+
+class ChatSendResponse(BaseModel):
+    session_id: UUID
+    assistant_message: str
+    tool_calls_made: list[str] = []

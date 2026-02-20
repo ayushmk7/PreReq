@@ -1,0 +1,264 @@
+openapi: 3.0.1
+info:
+  title: CanvasTLAdmin API
+  description: |-
+    This is a proxy of the Canvas API with power user ability, which is documented at https://canvas.instructure.com/doc/api/.
+
+  contact:
+    name: API Directory Support
+    email: apidir-contact@umich.edu
+  version: 1.0.0
+
+servers:
+  - url: https://gw.api.it.umich.edu/um/aa/CanvasTLAdmin
+    description: Prod server
+
+paths:
+  /{canvasApiPath}:
+    get:
+      tags:
+        - Enrollment
+      summary: fetches course enrollment details
+      operationId: getCourseEnrollment
+      parameters:
+        - in: path
+          name: canvasApiPath
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CanvasTLAdmin'
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/CanvasTLAdmin'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+        '429':
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+        '503':
+          description: Servervice Unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+    post:
+      tags:
+        - Enrollment
+      summary:  user enrollment to a course
+      operationId: addCourseEnrollment
+      parameters:
+        - in: path
+          name: canvasApiPath
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CanvasTLAdmin'
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/CanvasTLAdmin'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+        '429':
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+        '503':
+          description: Servervice Unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+    put:
+      tags:
+        - Enrollment
+      summary: fetches course enrollment details
+      operationId: updateCourseEnrollment
+      parameters:
+        - in: path
+          name: canvasApiPath
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CanvasTLAdmin'
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/CanvasTLAdmin'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+        '429':
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+        '503':
+          description: Servervice Unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+    delete:
+      tags:
+        - Enrollment
+      summary: fetches course enrollment details
+      operationId: deleteCourseEnrollment
+      parameters:
+        - in: path
+          name: canvasApiPath
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CanvasTLAdmin'
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/CanvasTLAdmin'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+        '429':
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+        '503':
+          description: Servervice Unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+  
+
+        
+components:
+  schemas:
+    CanvasTLAdmin:
+      type: object
+      nullable: true
+    ApiErrorResponse:
+      type: object
+      properties:
+        errorCode: 
+          type: string
+          example: ERR1001
+        errorMessage: 
+          type: string
+          example: error response
+      example:
+        errorCode: ERR400
+        errorMessage: error response
+      additionalProperties: false
+  securitySchemes:
+    oauth2_client_credentials:
+      type: oauth2
+      description: |- 
+        This API uses OAuth2 security with grant type as client_credentials.
+        
+        The following parameters are expected as query or form params.
+        - grant_type= client_credentials
+        - scope= canvastladmin
+          
+        client_id/App Key and client_secret/App Secret should be sent as Base64encoded string with Authorization header
+          
+        Eg: Authorization: Basic Base64Encoded(client_id:client_secret)
+      flows:
+        clientCredentials:
+          tokenUrl: https://gw.api.it.umich.edu/um/oauth2/token
+          scopes:
+            canvastladmin: Grants access to CanvasTLAdmin API
+            
+security:
+  - oauth2_client_credentials:
+    - canvastladmin

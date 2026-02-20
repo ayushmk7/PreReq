@@ -6,6 +6,7 @@ from typing import Optional
 import pandas as pd
 
 from app.schemas.schemas import ValidationError
+from app.services.validation_service import validate_file_limits
 
 
 async def validate_scores_csv(
@@ -20,6 +21,11 @@ async def validate_scores_csv(
         Tuple of (validated DataFrame or None, list of validation errors).
     """
     errors: list[ValidationError] = []
+
+    # --- File-level limits ---
+    limit_errors = validate_file_limits(file_content)
+    if limit_errors:
+        return None, limit_errors
 
     # --- Parse CSV ---
     try:
@@ -123,6 +129,11 @@ async def validate_mapping_csv(
         Tuple of (validated DataFrame or None, list of validation errors).
     """
     errors: list[ValidationError] = []
+
+    # --- File-level limits ---
+    limit_errors = validate_file_limits(file_content)
+    if limit_errors:
+        return None, limit_errors
 
     # --- Parse CSV ---
     try:

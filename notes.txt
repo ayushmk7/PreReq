@@ -1,1 +1,1 @@
-the knowedge graph can be uploaded to canvas and so can everything else, add support for that as well , 
+add support to make a knowledge graph which is basically 
