@@ -47,7 +47,7 @@ function buildUrl(path: string, params?: Record<string, string | undefined>): st
 }
 
 function headers(auth: boolean): HeadersInit {
-  void auth;
+  if (!auth) return {};
   const username = config.instructorUsername.trim();
   if (!username) return {};
   const password = config.instructorPassword ?? '';

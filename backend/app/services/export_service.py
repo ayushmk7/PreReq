@@ -235,7 +235,7 @@ This bundle contains the following artifacts ready for Canvas upload:
 
 1. Navigate to your course in Canvas
 2. Go to **Files** in the course navigation
-3. Create a folder named `ConceptLens Exports` (or similar)
+3. Create a folder named `PreReq Exports` (or similar)
 4. Upload the entire zip file, or extract and upload individual files
 5. For gradebook integration:
    - Use `student_readiness.csv` for grade import

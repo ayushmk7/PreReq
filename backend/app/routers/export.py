@@ -27,6 +27,7 @@ from app.models.models import (
 )
 from app.schemas.schemas import ExportListResponse, ExportRequest, ExportStatusResponse
 from app.services.export_service import generate_export_bundle, validate_export_bundle
+from app.services.object_storage_service import upload_export_bundle_artifact
 
 router = APIRouter(prefix="/api/v1/exams", tags=["Export"])
 
@@ -202,6 +203,7 @@ async def create_export(
             question_mapping=mapping_data,
             compute_run_id=compute_run_id,
         )
+        await upload_export_bundle_artifact(str(exam_id), file_path)
 
         # Validate the generated bundle
         validation_errors = validate_export_bundle(file_path, manifest)

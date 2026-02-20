@@ -1,4 +1,4 @@
-# ConceptLens -- Technical PRD (Part 1)
+# PreReq -- Technical PRD (Part 1)
 
 ## ML and AI Integration
 

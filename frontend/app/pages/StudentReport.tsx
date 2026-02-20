@@ -9,6 +9,8 @@ import { reportsService } from '../services/reportsService';
 import type { StudentListItem } from '../services/reportsService';
 import { coursesService } from '../services/coursesService';
 import { examsService } from '../services/examsService';
+import { ApiError } from '../services/apiClient';
+import { config } from '../services/config';
 import { PH } from '../constants/placeholders';
 import type { CourseResponse, ExamResponse, StudentReportResponse } from '../services/types';
 
@@ -76,13 +78,20 @@ export const StudentReport: React.FC = () => {
     setStudentsError(null);
     reportsService.listStudents(examId)
       .then(r => {
-        setStudents(r.students);
-        if (r.students.length === 0) {
+        const normalizedStudents = [...new Set(r.students.map((s) => s.student_id.trim()).filter(Boolean))]
+          .sort((a, b) => a.localeCompare(b))
+          .map((student_id) => ({ student_id } as StudentListItem));
+        setStudents(normalizedStudents);
+        if (normalizedStudents.length === 0) {
           setStudentsError('No students found. Run Compute first to generate student results.');
         }
       })
       .catch((err) => {
         setStudents([]);
+        if (err instanceof ApiError && (err.status === 401 || err.status === 403)) {
+          setStudentsError('Unauthorized. Set instructor credentials in frontend .env and retry.');
+          return;
+        }
         setStudentsError(err?.message ?? 'Failed to load students. Check that Compute has been run.');
       })
       .finally(() => setStudentsLoading(false));
@@ -118,6 +127,7 @@ export const StudentReport: React.FC = () => {
 
   const studyPlan = report?.study_plan ?? [];
   const weakConcepts = report?.top_weak_concepts ?? [];
+  const contactOrFallback = (value: string) => value.trim() || 'Not provided';
 
   const getColor = (readiness: number) => {
     if (readiness >= 0.7) return '#FFCB05';
@@ -309,23 +319,23 @@ export const StudentReport: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-3">
                   <div className="text-sm opacity-75 uppercase tracking-wide">Instructor</div>
-                  <div className="text-xl font-medium">{PH.INSTRUCTOR_NAME}</div>
+                  <div className="text-xl font-medium">{contactOrFallback(config.contacts.instructor.name)}</div>
                   <div className="space-y-2 text-sm opacity-90">
-                    <div className="flex items-center gap-2"><Mail className="w-4 h-4" /><span>{PH.INSTRUCTOR_EMAIL}</span></div>
-                    <div className="flex items-center gap-2"><Phone className="w-4 h-4" /><span>{PH.INSTRUCTOR_PHONE}</span></div>
-                    <div className="flex items-center gap-2"><MapPin className="w-4 h-4" /><span>{PH.INSTRUCTOR_OFFICE}</span></div>
+                    <div className="flex items-center gap-2"><Mail className="w-4 h-4" /><span>{contactOrFallback(config.contacts.instructor.email)}</span></div>
+                    <div className="flex items-center gap-2"><Phone className="w-4 h-4" /><span>{contactOrFallback(config.contacts.instructor.phone)}</span></div>
+                    <div className="flex items-center gap-2"><MapPin className="w-4 h-4" /><span>{contactOrFallback(config.contacts.instructor.office)}</span></div>
                   </div>
-                  <div className="pt-2 text-xs opacity-75">Office Hours: {PH.INSTRUCTOR_HOURS}</div>
+                  <div className="pt-2 text-xs opacity-75">Office Hours: {contactOrFallback(config.contacts.instructor.hours)}</div>
                 </div>
                 <div className="space-y-3">
                   <div className="text-sm opacity-75 uppercase tracking-wide">Teaching Assistant</div>
-                  <div className="text-xl font-medium">{PH.TA_NAME}</div>
+                  <div className="text-xl font-medium">{contactOrFallback(config.contacts.ta.name)}</div>
                   <div className="space-y-2 text-sm opacity-90">
-                    <div className="flex items-center gap-2"><Mail className="w-4 h-4" /><span>{PH.TA_EMAIL}</span></div>
-                    <div className="flex items-center gap-2"><Phone className="w-4 h-4" /><span>{PH.TA_PHONE}</span></div>
-                    <div className="flex items-center gap-2"><MapPin className="w-4 h-4" /><span>{PH.TA_OFFICE}</span></div>
+                    <div className="flex items-center gap-2"><Mail className="w-4 h-4" /><span>{contactOrFallback(config.contacts.ta.email)}</span></div>
+                    <div className="flex items-center gap-2"><Phone className="w-4 h-4" /><span>{contactOrFallback(config.contacts.ta.phone)}</span></div>
+                    <div className="flex items-center gap-2"><MapPin className="w-4 h-4" /><span>{contactOrFallback(config.contacts.ta.office)}</span></div>
                   </div>
-                  <div className="pt-2 text-xs opacity-75">Office Hours: {PH.TA_HOURS}</div>
+                  <div className="pt-2 text-xs opacity-75">Office Hours: {contactOrFallback(config.contacts.ta.hours)}</div>
                 </div>
               </div>
               <div className="mt-6 pt-6 border-t border-white/20">

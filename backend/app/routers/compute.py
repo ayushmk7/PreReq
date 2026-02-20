@@ -1,35 +1,19 @@
-"""Compute endpoint: API-05 — run readiness inference engine."""
+"""Compute endpoints."""
 
-import time
 import uuid
-from datetime import datetime
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import delete, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import get_current_instructor
+from app.config import settings
 from app.database import get_db
-from app.models.models import (
-    ClassAggregate,
-    Cluster,
-    ClusterAssignment,
-    ComputeRun,
-    ConceptGraph,
-    Exam,
-    InterventionResult,
-    Parameter,
-    Question,
-    QuestionConceptMap,
-    ReadinessResult,
-    Score,
-    StudentToken,
-)
+from app.models.models import ComputeRun, Exam, InterventionResult, Parameter
 from app.schemas.schemas import ComputeRequest, ComputeResponse, ComputeRunResponse
-from app.services.cluster_service import rank_interventions, run_clustering
-from app.services.compute_service import run_readiness_pipeline
-from app.services.report_service import generate_student_token
+from app.services.compute_queue_service import enqueue_compute_job
+from app.services.compute_runner_service import run_compute_pipeline_for_run
 
 router = APIRouter(prefix="/api/v1/exams", tags=["Compute"])
 
@@ -41,16 +25,7 @@ async def compute_readiness(
     db: AsyncSession = Depends(get_db),
     _user: str = Depends(get_current_instructor),
 ):
-    """Run the full readiness computation pipeline.
-
-    1. Loads scores, mapping, graph from DB
-    2. Runs 4-stage readiness inference
-    3. Runs k-means clustering
-    4. Ranks interventions by impact
-    5. Generates student tokens
-    6. Persists all results with run tracking
-    """
-    start = time.time()
+    """Run compute in sync mode or enqueue in async mode."""
     run_id = uuid.uuid4()
 
     result = await db.execute(select(Exam).where(Exam.id == exam_id))
@@ -68,266 +43,56 @@ async def compute_readiness(
     threshold = body.threshold if body.threshold != 0.6 else (params.threshold if params else 0.6)
     k = body.k if body.k != 4 else (params.k if params else 4)
 
-    # Get graph version for tracking
-    g_result = await db.execute(
-        select(ConceptGraph)
-        .where(ConceptGraph.exam_id == exam_id)
-        .order_by(ConceptGraph.version.desc())
-        .limit(1)
-    )
-    graph_row = g_result.scalar_one_or_none()
-    graph_version = graph_row.version if graph_row else 0
-
-    # Create compute run record
+    async_enabled = settings.COMPUTE_ASYNC_ENABLED
     compute_run = ComputeRun(
         exam_id=exam_id,
         run_id=run_id,
-        status="running",
+        status="queued" if async_enabled else "running",
         parameters_json={
             "alpha": alpha, "beta": beta, "gamma": gamma,
             "threshold": threshold, "k": k,
         },
-        graph_version=graph_version,
     )
     db.add(compute_run)
     await db.flush()
 
-    try:
-        # Load scores
-        score_result = await db.execute(
-            select(Score, Question)
-            .join(Question, Score.question_id == Question.id)
-            .where(Score.exam_id == exam_id)
-        )
-        score_rows = score_result.all()
-
-        if not score_rows:
-            raise HTTPException(
-                status_code=400,
-                detail="No scores found. Upload scores first (POST /scores).",
-            )
-
-        scores_dict: dict[str, dict[str, float]] = {}
-        max_scores_dict: dict[str, float] = {}
-        for score_obj, question_obj in score_rows:
-            sid = score_obj.student_id_external
-            qid = question_obj.question_id_external
-            if sid not in scores_dict:
-                scores_dict[sid] = {}
-            scores_dict[sid][qid] = score_obj.score
-            max_scores_dict[qid] = question_obj.max_score
-
-        # Load question-concept mapping
-        qcm_result = await db.execute(
-            select(QuestionConceptMap, Question)
-            .join(Question, QuestionConceptMap.question_id == Question.id)
-            .where(Question.exam_id == exam_id)
-        )
-        qcm_rows = qcm_result.all()
-
-        if not qcm_rows:
-            raise HTTPException(
-                status_code=400,
-                detail="No question-concept mapping found. Upload mapping first (POST /mapping).",
-            )
-
-        question_concept_map: dict[str, list[tuple[str, float]]] = {}
-        for qcm_obj, question_obj in qcm_rows:
-            cid = qcm_obj.concept_id
-            qid = question_obj.question_id_external
-            if cid not in question_concept_map:
-                question_concept_map[cid] = []
-            question_concept_map[cid].append((qid, qcm_obj.weight))
-
-        # Load graph (auto-create and persist if none exists)
-        if not graph_row:
-            all_concepts = sorted(question_concept_map.keys())
-
-            # Derive edges from concept co-occurrence on shared questions.
-            # Two concepts that appear on the same question are related.
-            # Direction follows first-appearance order across sorted questions
-            # to guarantee a DAG structure.
-            question_to_concepts: dict[str, list[str]] = {}
-            for cid, q_list in question_concept_map.items():
-                for qid, _w in q_list:
-                    question_to_concepts.setdefault(qid, []).append(cid)
-
-            first_seen: dict[str, int] = {}
-            for idx, qid in enumerate(sorted(question_to_concepts.keys())):
-                for cid in question_to_concepts[qid]:
-                    if cid not in first_seen:
-                        first_seen[cid] = idx
-
-            edge_set: set[tuple[str, str]] = set()
-            for qid, concepts_on_q in question_to_concepts.items():
-                if len(concepts_on_q) < 2:
-                    continue
-                sorted_by_appearance = sorted(concepts_on_q, key=lambda c: first_seen.get(c, 999))
-                for i in range(len(sorted_by_appearance) - 1):
-                    src, tgt = sorted_by_appearance[i], sorted_by_appearance[i + 1]
-                    edge_set.add((src, tgt))
-
-            graph_json = {
-                "nodes": [{"id": c, "label": c} for c in all_concepts],
-                "edges": [
-                    {"source": s, "target": t, "weight": 0.5}
-                    for s, t in sorted(edge_set)
-                ],
-            }
-            auto_graph = ConceptGraph(
-                exam_id=exam_id,
-                version=1,
-                graph_json=graph_json,
-            )
-            db.add(auto_graph)
-            await db.flush()
-            graph_version = 1
-        else:
-            graph_json = graph_row.graph_json
-
-        # Run readiness pipeline
-        pipeline_result = run_readiness_pipeline(
-            scores=scores_dict,
-            max_scores=max_scores_dict,
-            question_concept_map=question_concept_map,
-            graph_json=graph_json,
+    if async_enabled:
+        queued = await enqueue_compute_job(
+            exam_id=exam_id,
+            run_id=run_id,
             alpha=alpha,
             beta=beta,
             gamma=gamma,
             threshold=threshold,
-        )
-
-        # Clear old results
-        await db.execute(delete(ReadinessResult).where(ReadinessResult.exam_id == exam_id))
-        await db.execute(delete(ClassAggregate).where(ClassAggregate.exam_id == exam_id))
-        await db.execute(delete(ClusterAssignment).where(ClusterAssignment.exam_id == exam_id))
-        await db.execute(delete(Cluster).where(Cluster.exam_id == exam_id))
-        await db.execute(delete(InterventionResult).where(InterventionResult.exam_id == exam_id))
-        await db.flush()
-
-        # Persist readiness results
-        for r in pipeline_result["readiness_results"]:
-            rr = ReadinessResult(
-                exam_id=exam_id,
-                run_id=run_id,
-                student_id_external=r["student_id"],
-                concept_id=r["concept_id"],
-                direct_readiness=r["direct_readiness"],
-                prerequisite_penalty=r["prerequisite_penalty"],
-                downstream_boost=r["downstream_boost"],
-                final_readiness=r["final_readiness"],
-                confidence=r["confidence"],
-                explanation_trace_json=r["explanation_trace"],
-            )
-            db.add(rr)
-
-        # Persist class aggregates
-        for agg in pipeline_result["class_aggregates"]:
-            ca = ClassAggregate(
-                exam_id=exam_id,
-                run_id=run_id,
-                concept_id=agg["concept_id"],
-                mean_readiness=agg["mean_readiness"],
-                median_readiness=agg["median_readiness"],
-                std_readiness=agg["std_readiness"],
-                below_threshold_count=agg["below_threshold_count"],
-            )
-            db.add(ca)
-
-        # Run clustering
-        clustering_result = run_clustering(
-            final_readiness_matrix=pipeline_result["final_readiness_matrix"],
-            concepts=pipeline_result["concepts"],
-            students=pipeline_result["students"],
             k=k,
         )
-
-        for cl in clustering_result["clusters"]:
-            cluster = Cluster(
-                exam_id=exam_id,
-                run_id=run_id,
-                cluster_label=cl["cluster_label"],
-                centroid_json=cl["centroid"],
-                student_count=cl["student_count"],
+        if not queued:
+            compute_run.status = "failed"
+            compute_run.error_message = (
+                f"Unsupported queue backend: {settings.COMPUTE_QUEUE_BACKEND}"
             )
-            db.add(cluster)
             await db.flush()
+            raise HTTPException(status_code=500, detail="Failed to enqueue compute job")
 
-            for student_id, label in clustering_result["assignments"].items():
-                if label == cl["cluster_label"]:
-                    ca = ClusterAssignment(
-                        exam_id=exam_id,
-                        student_id_external=student_id,
-                        cluster_id=cluster.id,
-                    )
-                    db.add(ca)
+        return ComputeResponse(status="queued", run_id=run_id)
 
-        # Rank and persist interventions
-        interventions = rank_interventions(
-            final_readiness_matrix=pipeline_result["final_readiness_matrix"],
-            concepts=pipeline_result["concepts"],
-            adjacency=pipeline_result["adjacency"],
-            threshold=threshold,
-        )
-        for iv in interventions:
-            ir = InterventionResult(
-                exam_id=exam_id,
-                run_id=run_id,
-                concept_id=iv["concept_id"],
-                students_affected=iv["students_affected"],
-                downstream_concepts=iv["downstream_concepts"],
-                current_readiness=iv["current_readiness"],
-                impact=iv["impact"],
-                rationale=iv["rationale"],
-                suggested_format=iv["suggested_format"],
-            )
-            db.add(ir)
-
-        # Generate student tokens (if not already existing)
-        for student_id in pipeline_result["students"]:
-            existing = await db.execute(
-                select(StudentToken).where(
-                    StudentToken.exam_id == exam_id,
-                    StudentToken.student_id_external == student_id,
-                )
-            )
-            if not existing.scalar_one_or_none():
-                token = StudentToken(
-                    exam_id=exam_id,
-                    student_id_external=student_id,
-                    token=generate_student_token(),
-                )
-                db.add(token)
-
-        await db.flush()
-
-        elapsed = (time.time() - start) * 1000
-
-        # Update compute run
-        compute_run.status = "success"
-        compute_run.students_processed = len(pipeline_result["students"])
-        compute_run.concepts_processed = len(pipeline_result["concepts"])
-        compute_run.duration_ms = round(elapsed, 2)
-        compute_run.completed_at = datetime.utcnow()
-        await db.flush()
-
-        return ComputeResponse(
-            status="success",
-            run_id=run_id,
-            students_processed=len(pipeline_result["students"]),
-            concepts_processed=len(pipeline_result["concepts"]),
-            time_ms=round(elapsed, 2),
-        )
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        compute_run.status = "failed"
-        compute_run.error_message = str(e)
-        compute_run.completed_at = datetime.utcnow()
-        compute_run.duration_ms = round((time.time() - start) * 1000, 2)
-        await db.flush()
-        raise HTTPException(status_code=500, detail=f"Computation failed: {str(e)}")
+    result_stats = await run_compute_pipeline_for_run(
+        db=db,
+        exam_id=exam_id,
+        run_id=run_id,
+        alpha=alpha,
+        beta=beta,
+        gamma=gamma,
+        threshold=threshold,
+        k=k,
+    )
+    return ComputeResponse(
+        status="success",
+        run_id=run_id,
+        students_processed=int(result_stats["students_processed"]),
+        concepts_processed=int(result_stats["concepts_processed"]),
+        time_ms=float(result_stats["time_ms"]),
+    )
 
 
 @router.get("/{exam_id}/compute/runs", response_model=list[ComputeRunResponse])

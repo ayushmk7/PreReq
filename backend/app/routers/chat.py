@@ -2,7 +2,7 @@
 
 Supports multi-turn conversations with persistent sessions.
 The assistant uses OpenAI function calling to query and act
-on the full ConceptLens system.
+on the full PreReq system.
 """
 
 import logging

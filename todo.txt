@@ -1,61 +1,68 @@
-Backend ML+AI Production Pre-Implementation TODO
+OCI Integration Backlog (Deep / Full Setup)
 
-1) Define product scope and success criteria
-- Finalize MVP features for backend + ML/AI integration.
-- Write measurable success metrics (latency, accuracy, completion rates, adoption).
-- Confirm non-goals to prevent scope creep.
+1) OCI tenancy and compartment structure
+- Create compartments: conceptlens-dev, conceptlens-stage, conceptlens-prod.
+- Define naming and tagging convention (project=conceptlens, env, owner, costCenter).
+- Confirm home region and choose a secondary region for DR drills.
 
-2) Confirm data contracts and source systems
-- List each upstream system and exact payloads/events we will consume.
-- Define required fields, optional fields, and validation rules.
-- Document data freshness and expected sync frequency.
+2) IAM and least-privilege access
+- Create groups: conceptlens-admins, conceptlens-deployers, conceptlens-ops-readonly.
+- Create dynamic groups for runtime workloads (API and worker containers).
+- Apply least-privilege policies for Vault, OCIR, Object Storage, Queue, Logging, Monitoring, and PostgreSQL access.
 
-3) Gather UMich Canvas API details (required input from you)
-- Confirm Canvas instance/base URL for UMich environment.
-- Share auth approach available to us (developer key/OAuth2 token/PAT/service account).
-- Provide sandbox vs production access details.
-- List endpoints we are allowed to use (courses, users, enrollments, assignments, submissions, grades, files, discussions, calendar, etc.).
-- Confirm API rate limits/throttling and retry guidance.
-- Clarify pagination patterns and webhook/event support.
-- Share field-level access constraints (FERPA/privacy restrictions).
-- Confirm Terms of Use/compliance requirements for storing or processing Canvas data.
+3) Networking baseline
+- Create VCN with separate public and private subnets.
+- Put Load Balancer in public subnet; keep API/worker and DB in private subnets.
+- Configure NSGs and route tables to restrict ingress/egress paths.
+- Add HTTPS termination with managed certificates and DNS records.
 
-4) Security and compliance prerequisites
-- Define PII handling policy and data minimization rules.
-- Confirm encryption requirements (at rest + in transit).
-- Set retention/deletion policy and audit logging expectations.
-- Document secrets management approach (no secrets in repo, use env/secret manager).
+4) Secrets and configuration
+- Create OCI Vault and keys.
+- Store secrets: DATABASE_URL, OPENAI_API_KEY, INSTRUCTOR_USERNAME, INSTRUCTOR_PASSWORD.
+- Move runtime config to secret references; remove server-side plaintext env storage.
 
-5) Architecture and environment readiness
-- Finalize target architecture diagram (services, queues, DBs, model serving path).
-- Create dev/staging/prod environment matrix and promotion path.
-- Choose observability stack (logs, metrics, traces, alerts) and SLO targets.
-- Confirm rollback strategy and incident response process.
+5) Data plane (PostgreSQL and storage)
+- Provision OCI Database with PostgreSQL for app metadata and compute results.
+- Run Alembic migrations and validate schema integrity.
+- Create Object Storage buckets: frontend-static, uploads, exports, backups.
+- Configure lifecycle rules for retention and cost control.
 
-6) ML/AI readiness checklist
-- Define model objective, offline metrics, and acceptance thresholds.
-- Confirm feature availability and data labeling quality.
-- Decide model lifecycle workflow (training cadence, evaluation, registry, deployment).
-- Define guardrails: hallucination handling, confidence thresholds, safe fallbacks.
-- Plan human-in-the-loop review for critical decisions.
+6) Runtime delivery (manual, no CI/CD)
+- Build backend and worker container images.
+- Push images to OCIR manually.
+- Deploy API and worker on OCI Container Instances.
+- Configure health checks and autoscaling policy boundaries (manual scale actions initially).
 
-7) API and backend engineering tasks before build
-- Draft API contracts (OpenAPI/JSON schema) and versioning strategy.
-- Define idempotency, retry behavior, and error taxonomy.
-- Plan background job architecture and queue semantics.
-- Create migration plan for schema changes and backfills.
+7) Frontend delivery
+- Build frontend static bundle and upload to frontend-static bucket.
+- Configure Object Storage static website hosting and OCI CDN.
+- Set VITE_API_BASE_URL to OCI API endpoint and validate end-to-end flows.
 
-8) Testing and launch readiness
-- Prepare test plan: unit, integration, contract, load, and failure injection.
-- Define staged rollout (internal alpha -> pilot -> GA).
-- Create runbooks and on-call ownership.
-- Define post-launch KPI dashboard and weekly review cadence.
+8) Async compute migration readiness
+- Keep existing run tracking model (run_id and status fields).
+- Convert /compute into submit + status endpoints for queue-driven execution.
+- Add worker polling and retry semantics with idempotency key by exam_id + run_id.
+- Preserve intervention/report behavior and API response compatibility.
 
-9) Decisions needed from stakeholders
-- Who owns Canvas integration credentials and approval process?
-- Which user roles/data scopes are in-scope for phase 1?
-- What is the target launch date and acceptable risk level?
-- What budget/compute limits should govern model training/inference?
+9) Observability and alerting
+- Enable OCI Logging for Load Balancer, Container Instances, and API app logs.
+- Create Monitoring metrics and alarms: 5xx count, p95 latency, DB connectivity failures, queue lag.
+- Add runbooks for incident response and rollback.
 
-Immediate next step:
-- Share the UMich Canvas API access details in section (3); that is the main blocker before implementation planning can be finalized.
+10) Security hardening
+- Replace permissive CORS in production with allowed origins list.
+- Replace placeholder auth with production auth (JWT/OIDC or API gateway auth policy).
+- Enforce TLS in transit and at-rest encryption defaults for DB and Object Storage.
+
+11) Disaster recovery and backups
+- Configure daily DB backups and periodic restore tests.
+- Define RPO and RTO targets and document failover checklist.
+- Export critical config as code artifacts (where possible) for reproducible recovery.
+
+12) Day-1 execution checklist (what to do now)
+- Create compartments and IAM groups/policies.
+- Provision PostgreSQL and save DATABASE_URL in Vault.
+- Create Object Storage buckets and lifecycle policies.
+- Deploy backend container in OCI and validate /health and /docs.
+- Publish frontend to Object Storage + CDN and point DNS.
+- Run smoke test: upload scores -> upload mapping -> compute -> instructor dashboard/report.

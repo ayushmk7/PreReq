@@ -1,0 +1,37 @@
+# Copy to terraform.tfvars and fill values.
+# Values below were prefilled from your screenshot where available.
+# NOTE: Keep this file local and do not commit real OCIDs/secrets.
+
+tenancy_ocid     = "ocid1.tenancy.oc1..aaaaaaa6oyz2to37zlnur6uw7krshxsvo56c35pi6eyjaev2zere6mtjerq"
+user_ocid        = "ocid1.user.oc1..example"
+fingerprint      = "aa:bb:cc:dd:ee:ff:00:11:22:33:44:55:66:77:88:99"
+private_key_path = "~/.oci/oci_api_key.pem"
+region           = "us-sanjose-1"
+
+compartment_ocid = "ocid1.compartment.oc1..example"
+project_prefix   = "prereq-dev"
+
+vcn_cidr           = "10.20.0.0/16"
+public_subnet_cidr = "10.20.1.0/24"
+app_subnet_cidr    = "10.20.2.0/24"
+db_subnet_cidr     = "10.20.3.0/24"
+
+bucket_names = [
+  "frontend-static",
+  "uploads",
+  "exports",
+  "backups",
+]
+
+ocir_repositories = [
+  "prereq-api",
+  "prereq-worker",
+]
+
+create_alarm_placeholders = true
+
+# OCI account info from screenshot (for reference)
+# tenancy_name              = "sjampani"
+# home_region_short         = "SJC"
+# object_storage_namespace  = "ax7iqjhzuama"
+# csi_number                = "119918287"

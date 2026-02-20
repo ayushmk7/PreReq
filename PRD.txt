@@ -1,12 +1,12 @@
-ConceptLens
+PreReq
 AI-Powered Assessment Intelligence for Higher Education
 Positioning: Faculty Decision Intelligence + Student Metacognition
 Tagline: Turn exams into conceptual insight -- at scale, transparently, and fairly.
 
 
 1. Executive Summary
-ConceptLens is an AI-powered Assessment Intelligence platform that transforms raw exam performance data into structured, dependency-aware concept readiness maps. It is designed for large STEM gateway courses at public universities where traditional assessment tools fail to explain why performance patterns occur.
-Traditional tools provide question averages and grade distributions. They cannot distinguish whether poor performance on a topic stems from a misunderstanding of that topic itself, from weak prerequisite knowledge, or from procedural errors. ConceptLens closes this gap by computing concept-level readiness scores, tracing foundational gaps through a prerequisite dependency graph, clustering misconceptions, prioritizing instructor interventions, and generating personalized student study plans.
+PreReq is an AI-powered Assessment Intelligence platform that transforms raw exam performance data into structured, dependency-aware concept readiness maps. It is designed for large STEM gateway courses at public universities where traditional assessment tools fail to explain why performance patterns occur.
+Traditional tools provide question averages and grade distributions. They cannot distinguish whether poor performance on a topic stems from a misunderstanding of that topic itself, from weak prerequisite knowledge, or from procedural errors. PreReq closes this gap by computing concept-level readiness scores, tracing foundational gaps through a prerequisite dependency graph, clustering misconceptions, prioritizing instructor interventions, and generating personalized student study plans.
 The system augments instructor judgment. It does not assign grades, rank students, or make automated academic decisions.
 
 2. Problem Statement
@@ -14,7 +14,7 @@ The system augments instructor judgment. It does not assign grades, rank student
 Assessment tools are question-centric. Learning is concept-centric and dependency-structured. When students perform poorly on a composite topic, instructors cannot determine from raw scores alone whether the high-level concept itself is misunderstood, whether foundational prerequisites are weak, or whether procedural errors masked conceptual understanding. This ambiguity leads to inefficient reteaching and poorly targeted interventions.
 2.2 Student Feedback Gap
 Students typically receive a numeric score and possibly brief written comments. They do not receive structured concept-level feedback, a prerequisite-ordered study plan, or insight into why they struggled. Without this, students study inefficiently, often reviewing material they already understand while ignoring the actual root cause of their errors.
-ConceptLens addresses both gaps simultaneously by connecting exam performance to a structured concept dependency graph and surfacing actionable intelligence for both instructors and students.
+PreReq addresses both gaps simultaneously by connecting exam performance to a structured concept dependency graph and surfacing actionable intelligence for both instructors and students.
 3. Product Objectives
 3.1 Primary Objectives
 Reveal root causes behind exam performance patterns using dependency-aware inference.
@@ -39,7 +39,7 @@ Needs: Understand which concepts are weak. Identify which prerequisite gaps are 
 Workflow: Receives link to personal report (no login required for MVP; report accessed via unique token). Views concept readiness graph. Follows the prerequisite-ordered study plan.
 
 5. Solution Overview
-ConceptLens generates a Concept Readiness Graph for each individual student and for the entire class aggregate. The graph is a directed acyclic graph (DAG) where nodes represent concepts and directed edges represent prerequisite dependencies.
+PreReq generates a Concept Readiness Graph for each individual student and for the entire class aggregate. The graph is a directed acyclic graph (DAG) where nodes represent concepts and directed edges represent prerequisite dependencies.
 5.1 Node Properties
 Property
 Type
@@ -443,7 +443,7 @@ Pursue LMS marketplace listings (Canvas, Blackboard, Moodle) in Phase 2.
 12. Competitive Differentiation
 Capability
 Standard LMS Tools
-ConceptLens
+PreReq
 Granularity
 Question-level averages
 Concept-level readiness with dependency structure
@@ -463,7 +463,7 @@ Transparency
 Black-box item analysis
 Open formula with adjustable parameters
 
-ConceptLens is an Assessment Intelligence layer, not a grading tool. It sits on top of existing grading workflows and adds diagnostic depth that no current LMS provides.
+PreReq is an Assessment Intelligence layer, not a grading tool. It sits on top of existing grading workflows and adds diagnostic depth that no current LMS provides.
 13. Ethical Safeguards
 No automated grading decisions. The system provides intelligence; the instructor decides.
 No student ranking or percentile computation at any point.
@@ -528,7 +528,7 @@ SLA-backed deployment options.
 API for third-party integrations.
 16. Rubric Alignment Summary
 Criteria
-How ConceptLens Addresses It
+How PreReq Addresses It
 Technical Architecture
 Real inference engine with a defined 4-stage computation pipeline. Vectorized numpy processing for scalability. Full database schema. Defined API specification. Deterministic outputs. Clear success metrics with targets and measurement methods.
 Functionality & Feasibility
@@ -542,7 +542,7 @@ Dependency-aware readiness inference is not available in any current LMS tool. U
 
 
 17. Feedback and Scoring Assessment
-Below is a self-assessment of ConceptLens against the provided rubric criteria, with current scores and specific improvements needed to reach 30/30.
+Below is a self-assessment of PreReq against the provided rubric criteria, with current scores and specific improvements needed to reach 30/30.
 17.1 Technical Architecture -- Current Score: 4/5
 Strengths: The PRD defines a coherent 4-stage inference pipeline with explicit formulas. The database schema covers all required entities. The API specification is complete with request/response types. Success metrics are defined with numeric targets and measurement methods. Scalability is addressed through vectorized computation and a PostgreSQL migration path.
 Gap: The MVP does not yet include a working prototype or benchmark results. Computation performance claims (sub-10s for 1,200 students) are estimated but not validated.
@@ -558,14 +558,14 @@ To reach 5/5: Add wireframe mockups for the instructor dashboard and student rep
 17.4 Business Relevance -- Current Score: 4/5
 Strengths: Clear buyer personas. Revenue model with four pricing tiers. Quantitative KPIs. Go-to-market strategy. Strong differentiation from existing LMS tools.
 Gap: No competitive landscape analysis with named competitors. No market size estimation. Pricing is not yet validated.
-To reach 5/5: Add a competitive matrix comparing ConceptLens to specific tools (e.g., Canvas Analytics, Gradescope, Knewton). Estimate the addressable market (number of R1 universities, STEM gateway course count, potential revenue). Include a pricing validation plan (instructor interviews or willingness-to-pay survey).
+To reach 5/5: Add a competitive matrix comparing PreReq to specific tools (e.g., Canvas Analytics, Gradescope, Knewton). Estimate the addressable market (number of R1 universities, STEM gateway course count, potential revenue). Include a pricing validation plan (instructor interviews or willingness-to-pay survey).
 17.5 Customer Value & Impact -- Current Score: 5/5
 Strengths: The problem is sharply defined with a clear structural argument (question-centric vs. concept-centric). Personas include specific workflows and contexts. Pain points are real and validated by the widespread dissatisfaction with LMS analytics. Ethical safeguards are deeply integrated: no ranking, no demographics, no automated decisions, confidence bands everywhere, full instructor control.
 No major gap. This section is strong. Minor improvement: add a direct quote or anecdote from an instructor interview to ground the persona.
 17.6 Innovation & Originality -- Current Score: 4/5
 Strengths: Dependency-aware readiness inference is genuinely novel in the EdTech assessment space. The upstream penalty and downstream boost mechanism is a meaningful contribution. Root-cause waterfall tracing is a new visualization paradigm. The combination of instructor intelligence and student metacognition in one platform is rare.
-Gap: The novelty could be better justified with references to related work in educational data mining and knowledge tracing. The PRD does not position ConceptLens relative to academic research (e.g., Bayesian Knowledge Tracing, Item Response Theory).
-To reach 5/5: Add a brief related work section that positions ConceptLens relative to BKT, IRT, and Knowledge Space Theory. Explain why ConceptLens is a practical alternative (no learner modeling assumptions, no training data required, works from a single exam). This strengthens the innovation claim by showing awareness of the research landscape.
+Gap: The novelty could be better justified with references to related work in educational data mining and knowledge tracing. The PRD does not position PreReq relative to academic research (e.g., Bayesian Knowledge Tracing, Item Response Theory).
+To reach 5/5: Add a brief related work section that positions PreReq relative to BKT, IRT, and Knowledge Space Theory. Explain why PreReq is a practical alternative (no learner modeling assumptions, no training data required, works from a single exam). This strengthens the innovation claim by showing awareness of the research landscape.
 17.7 Score Summary
 Criteria
 Current Score

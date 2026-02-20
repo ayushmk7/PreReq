@@ -1,4 +1,4 @@
-"""Shared test fixtures for ConceptLens backend tests."""
+"""Shared test fixtures for PreReq backend tests."""
 
 import numpy as np
 import pytest

@@ -1,4 +1,4 @@
-"""ConceptLens FastAPI application entry point."""
+"""PreReq FastAPI application entry point."""
 
 import logging
 import sys
@@ -7,6 +7,7 @@ import structlog
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.config import settings
 from app.middleware.observability import ObservabilityMiddleware
 from app.routers import (
     ai_suggestions,
@@ -53,9 +54,9 @@ logging.basicConfig(
 # ---------------------------------------------------------------------------
 
 app = FastAPI(
-    title="ConceptLens API",
+    title="PreReq API",
     description=(
-        "Backend API for ConceptLens - a concept readiness analysis platform "
+        "Backend API for PreReq - a concept readiness analysis platform "
         "for instructors and students. Computes per-student concept readiness "
         "scores using a DAG-based inference engine, provides instructor "
         "dashboards with heatmaps and root-cause tracing, generates "
@@ -72,9 +73,14 @@ app = FastAPI(
 # ---------------------------------------------------------------------------
 
 app.add_middleware(ObservabilityMiddleware)
+
+cors_origins = [origin.strip() for origin in settings.CORS_ALLOWED_ORIGINS.split(",") if origin.strip()]
+if not cors_origins:
+    cors_origins = ["*"]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

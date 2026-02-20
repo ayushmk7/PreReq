@@ -1,4 +1,4 @@
-"""OpenAI-backed AI assistive service for ConceptLens.
+"""OpenAI-backed AI assistive service for PreReq.
 
 Features:
   - Concept tag suggestion from question text

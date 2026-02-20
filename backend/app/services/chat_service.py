@@ -1,6 +1,6 @@
 """Agentic AI chat service using OpenAI function calling.
 
-The assistant has full read access to all ConceptLens data and can
+The assistant has full read access to all PreReq data and can
 trigger actions like recomputation, parameter updates, export generation,
 and AI suggestion workflows. Every tool call maps to a real database
 query or system action.
@@ -50,7 +50,7 @@ def _get_client() -> AsyncOpenAI:
     return _client
 
 
-SYSTEM_PROMPT = """You are the ConceptLens AI Assistant — an expert educational analytics agent built into a concept-readiness analysis platform for university instructors.
+SYSTEM_PROMPT = """You are the PreReq AI Assistant — an expert educational analytics agent built into a concept-readiness analysis platform for university instructors.
 
 You have FULL access to the instructor's course data through your tools. You can:
 - Look up any student's grades, readiness scores, and study plans

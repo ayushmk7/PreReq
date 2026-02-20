@@ -1,4 +1,4 @@
-# ConceptLens -- Technical PRD
+# PreReq -- Technical PRD
 
 This PRD has been split into two focused documents:
 

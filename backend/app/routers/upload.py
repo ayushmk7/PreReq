@@ -1,5 +1,6 @@
 """Upload endpoints: API-01 (scores), API-02 (mapping), API-03 (graph)."""
 
+import json
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
@@ -23,6 +24,7 @@ from app.schemas.schemas import (
 )
 from app.services.csv_service import validate_mapping_csv, validate_scores_csv
 from app.services.graph_service import validate_graph
+from app.services.object_storage_service import upload_raw_upload_artifact
 
 router = APIRouter(prefix="/api/v1/exams", tags=["Upload"])
 
@@ -49,7 +51,8 @@ async def upload_scores(
         raise HTTPException(status_code=404, detail="Exam not found")
 
     content = await file.read()
-    df, errors, student_detection = await validate_scores_csv(content)
+    await upload_raw_upload_artifact(str(exam_id), "scores.csv", content, "text/csv")
+    df, errors, student_detection = await validate_scores_csv(content, include_student_detection=True)
 
     if errors:
         return ScoresUploadResponse(status="error", errors=errors)
@@ -120,6 +123,7 @@ async def upload_mapping(
     existing_qids = {row[0] for row in q_result.fetchall()}
 
     content = await file.read()
+    await upload_raw_upload_artifact(str(exam_id), "mapping.csv", content, "text/csv")
     df, errors = await validate_mapping_csv(content, existing_qids)
 
     if errors:
@@ -183,6 +187,12 @@ async def upload_graph(
         "nodes": [n.model_dump() for n in body.nodes],
         "edges": [e.model_dump() for e in body.edges],
     }
+    await upload_raw_upload_artifact(
+        str(exam_id),
+        "graph.json",
+        json.dumps(graph_json).encode("utf-8"),
+        "application/json",
+    )
 
     is_valid, errors, cycle_path = validate_graph(graph_json)
 

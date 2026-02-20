@@ -1,4 +1,4 @@
-# ConceptLens -- Technical PRD (Part 2)
+# PreReq -- Technical PRD (Part 2)
 
 ## Backend System and Actual System Design
 

@@ -32,28 +32,36 @@ def detect_students(df: pd.DataFrame) -> StudentDetectionSummary:
 
 async def validate_scores_csv(
     file_content: bytes,
-) -> tuple[Optional[pd.DataFrame], list[ValidationError], Optional[StudentDetectionSummary]]:
+    include_student_detection: bool = False,
+) -> tuple[Optional[pd.DataFrame], list[ValidationError]] | tuple[
+    Optional[pd.DataFrame], list[ValidationError], Optional[StudentDetectionSummary]
+]:
     """Validate an exam scores CSV file per PRD §1.2.1.
 
     Required columns: StudentID, QuestionID, Score
     Optional column: MaxScore (defaults to 1.0)
 
     Returns:
-        Tuple of (validated DataFrame or None, list of validation errors, student detection summary or None).
+        By default: (validated DataFrame or None, list of validation errors).
+        If include_student_detection=True: adds a third element with student detection summary.
     """
     errors: list[ValidationError] = []
 
     # --- File-level limits ---
     limit_errors = validate_file_limits(file_content)
     if limit_errors:
-        return None, limit_errors, None
+        if include_student_detection:
+            return None, limit_errors, None
+        return None, limit_errors
 
     # --- Parse CSV ---
     try:
         df = pd.read_csv(io.BytesIO(file_content))
     except Exception as e:
         errors.append(ValidationError(message=f"Failed to parse CSV: {str(e)}"))
-        return None, errors, None
+        if include_student_detection:
+            return None, errors, None
+        return None, errors
 
     # --- Check required columns ---
     required = {"StudentID", "QuestionID", "Score"}
@@ -62,7 +70,9 @@ async def validate_scores_csv(
         errors.append(ValidationError(
             message=f"Missing required columns: {', '.join(sorted(missing))}"
         ))
-        return None, errors, None
+        if include_student_detection:
+            return None, errors, None
+        return None, errors
 
     # --- Default MaxScore ---
     if "MaxScore" not in df.columns:
@@ -126,7 +136,9 @@ async def validate_scores_csv(
                     seen.add(key)
 
     if errors:
-        return None, errors, None
+        if include_student_detection:
+            return None, errors, None
+        return None, errors
 
     # Ensure string columns
     df["StudentID"] = df["StudentID"].astype(str).str.strip()
@@ -134,7 +146,9 @@ async def validate_scores_csv(
     df["Score"] = df["Score"].astype(float)
     df["MaxScore"] = df["MaxScore"].astype(float)
 
-    return df, errors, detect_students(df)
+    if include_student_detection:
+        return df, errors, detect_students(df)
+    return df, errors
 
 
 async def validate_mapping_csv(
