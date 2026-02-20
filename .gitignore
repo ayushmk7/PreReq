@@ -60,3 +60,7 @@ htmlcov/
 *.local
 .vercel
 .turbo
+infra/oci/.terraform/
+infra/oci/terraform.tfstate
+infra/oci/terraform.tfstate.*
+infra/oci/terraform.tfvars
