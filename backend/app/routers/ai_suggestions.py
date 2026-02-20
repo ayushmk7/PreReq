@@ -495,6 +495,9 @@ async def apply_suggestions(
             elif s.suggestion_type == "concept_tag":
                 await _apply_tag_suggestion(s, exam_id, db, _user)
                 applied += 1
+            elif s.suggestion_type == "graph_expansion":
+                await _apply_graph_expansion_suggestion(s, exam_id, db, _user)
+                applied += 1
             elif s.suggestion_type == "intervention":
                 s.status = "applied"
                 s.applied_at = datetime.utcnow()
@@ -612,5 +615,73 @@ async def _apply_tag_suggestion(
         action="apply_tag_suggestion",
         entity_type="question_concept_map",
         after_payload={"applied_mappings": applied_to},
+    )
+    db.add(audit)
+
+
+async def _apply_graph_expansion_suggestion(
+    suggestion: AISuggestion,
+    exam_id: UUID,
+    db: AsyncSession,
+    actor: str,
+):
+    """Apply accepted graph-expansion suggestions by merging new nodes/edges into the latest graph version."""
+    g_result = await db.execute(
+        select(ConceptGraph)
+        .where(ConceptGraph.exam_id == exam_id)
+        .order_by(ConceptGraph.version.desc())
+        .limit(1)
+    )
+    graph_row = g_result.scalar_one_or_none()
+    if not graph_row:
+        raise ValueError("No graph found to apply expansion to")
+
+    before_json = graph_row.graph_json
+    G = build_graph(before_json)
+
+    new_nodes = suggestion.output_payload.get("nodes", [])
+    new_edges = suggestion.output_payload.get("edges", [])
+
+    for node in new_nodes:
+        node_id = node.get("id")
+        if not node_id or G.has_node(node_id):
+            continue
+        G.add_node(node_id, label=node.get("label", node_id))
+
+    for edge in new_edges:
+        src, tgt = edge.get("source"), edge.get("target")
+        if not src or not tgt:
+            continue
+        if G.has_edge(src, tgt):
+            continue
+        if not G.has_node(src):
+            G.add_node(src, label=src)
+        if not G.has_node(tgt):
+            G.add_node(tgt, label=tgt)
+        G.add_edge(src, tgt, weight=edge.get("weight", 0.5))
+
+    after_json = graph_to_json(G)
+
+    new_graph = ConceptGraph(
+        exam_id=exam_id,
+        version=graph_row.version + 1,
+        graph_json=after_json,
+        annotation=f"Applied AI graph expansion (suggestion {suggestion.id})",
+    )
+    db.add(new_graph)
+
+    suggestion.status = "applied"
+    suggestion.applied_at = datetime.utcnow()
+    suggestion.before_snapshot = before_json
+    suggestion.after_snapshot = after_json
+
+    audit = AuditLog(
+        exam_id=exam_id,
+        actor=actor,
+        action="apply_graph_expansion",
+        entity_type="concept_graph",
+        entity_id=str(new_graph.id),
+        before_payload=before_json,
+        after_payload=after_json,
     )
     db.add(audit)

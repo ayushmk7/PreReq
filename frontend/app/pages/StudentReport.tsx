@@ -131,6 +131,29 @@ export const StudentReport: React.FC = () => {
     return 'low';
   };
 
+  const studentSelectorControl = (
+    <>
+      <label className="text-xs font-medium text-foreground-secondary flex-shrink-0">Student</label>
+      <select
+        value={selectedStudentId}
+        onChange={(e) => setSelectedStudentId(e.target.value)}
+        disabled={studentsLoading || !examId || students.length === 0}
+        className="bg-surface border border-border rounded-lg px-4 py-2 text-sm text-foreground appearance-none bg-[length:16px_16px] bg-[position:right_12px_center] bg-no-repeat bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2216%22%20height%3D%2216%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%2364748b%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22m6%209%206%206%206-6%22%2F%3E%3C%2Fsvg%3E')] focus:outline-none focus:ring-2 focus:ring-[#FFCB05] pr-10 min-w-[220px] disabled:opacity-60"
+      >
+        <option value="">{studentSelectorPlaceholder}</option>
+        {students.map(s => (
+          <option key={s.student_id} value={s.student_id}>{s.student_id}</option>
+        ))}
+      </select>
+      {studentsError && !studentsLoading && (
+        <div className="flex items-center gap-1.5 text-xs text-[#D55E00] max-w-[260px]">
+          <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+          <span className="truncate">{studentsError}</span>
+        </div>
+      )}
+    </>
+  );
+
   return (
     <div className="min-h-screen bg-background">
       <InstructorTaskBar
@@ -143,35 +166,15 @@ export const StudentReport: React.FC = () => {
         onExamChange={setExamId}
         studentCount={concepts.length > 0 ? 1 : undefined}
         conceptCount={concepts.length || undefined}
+        extraControl={studentSelectorControl}
       />
-      {/* Student selector row */}
-      <div className="bg-white border-b border-border px-8 py-3 flex items-center gap-4">
-        <label className="text-xs font-medium text-foreground-secondary flex-shrink-0">Student</label>
-        <select
-          value={selectedStudentId}
-          onChange={(e) => setSelectedStudentId(e.target.value)}
-          disabled={studentsLoading || !examId || students.length === 0}
-          className="bg-surface border border-border rounded-lg px-4 py-2 text-sm text-foreground appearance-none bg-[length:16px_16px] bg-[position:right_12px_center] bg-no-repeat bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2216%22%20height%3D%2216%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%2364748b%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22m6%209%206%206%206-6%22%2F%3E%3C%2Fsvg%3E')] focus:outline-none focus:ring-2 focus:ring-[#FFCB05] pr-10 min-w-[220px] disabled:opacity-60"
-        >
-          <option value="">{studentSelectorPlaceholder}</option>
-          {students.map(s => (
-            <option key={s.student_id} value={s.student_id}>{s.student_id}</option>
-          ))}
-        </select>
-
-        {studentsError && !studentsLoading && (
-          <div className="flex items-center gap-1.5 text-xs text-[#D55E00]">
-            <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
-            <span>{studentsError}</span>
-          </div>
-        )}
-
-        {report && (
-          <span className="ml-auto text-sm text-foreground-secondary flex-shrink-0">
+      {report && (
+        <div className="bg-white border-b border-border px-8 py-2">
+          <div className="text-sm text-foreground-secondary text-right">
             Overall Progress: <span className="text-[#00274C] font-medium">{overallProgress}%</span>
-          </span>
-        )}
-      </div>
+          </div>
+        </div>
+      )}
 
       {loading ? (
         <div className="flex items-center justify-center h-96">

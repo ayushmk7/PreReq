@@ -118,7 +118,7 @@ export const WaterfallChart: React.FC<WaterfallChartProps> = ({ data }) => {
       .attr('x', (d) => x(d.start) + 8)
       .attr('y', (_, i) => y(i)! + y.bandwidth() / 2)
       .attr('dy', '0.35em')
-      .attr('fill', '#FFFFFF')
+      .attr('fill', '#000000')
       .attr('font-size', '11px')
       .attr('font-weight', '600')
       .attr('font-family', 'SF Mono, Monaco, monospace')

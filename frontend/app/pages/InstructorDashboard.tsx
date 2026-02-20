@@ -154,8 +154,6 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({ onConc
         examId={examId}
         onCourseChange={setCourseId}
         onExamChange={setExamId}
-        studentCount={students.length}
-        conceptCount={concepts.length}
       />
 
       {loading ? (
@@ -250,15 +248,15 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({ onConc
               </div>
             </motion.div>
 
-            <motion.div className="bg-white border border-border rounded-xl p-6 shadow-sm" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-              <div className="space-y-4">
+            <motion.div className="bg-white border border-border rounded-xl p-6 shadow-sm h-[520px]" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+              <div className="h-full flex flex-col">
                 <div className="flex items-center gap-2">
                   <AlertCircle className="w-5 h-5 text-critical" />
                   <h2 className="text-lg text-foreground">Root Cause Analysis</h2>
                 </div>
                 {alerts.length > 0 ? (
-                  <div className="space-y-3">
-                    {alerts.slice(0, 5).map((alert) => (
+                  <div className="space-y-3 overflow-y-auto mt-4 pr-1 flex-1">
+                    {alerts.map((alert) => (
                       <AlertPanel
                         key={alert.id}
                         alert={alert}
@@ -284,7 +282,7 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({ onConc
                 <ConceptDAG examId={examId} concepts={concepts} onNodeClick={handleNodeClick} selectedNodeId={selectedConceptId} />
               </div>
               <div className="text-xs text-foreground-secondary text-center pt-2">
-                Click a node for root-cause analysis. Double-click to expand with AI-suggested subtopics.
+                Right-click any node to choose AI Expand or Root Cause Analysis.
               </div>
             </div>
           </motion.div>

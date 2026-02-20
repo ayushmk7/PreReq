@@ -13,6 +13,7 @@ interface InstructorTaskBarProps {
   onExamChange: (id: string | null) => void;
   studentCount?: number;
   conceptCount?: number;
+  extraControl?: React.ReactNode;
 }
 
 const selectClass =
@@ -28,18 +29,19 @@ export const InstructorTaskBar: React.FC<InstructorTaskBarProps> = ({
   onExamChange,
   studentCount,
   conceptCount,
+  extraControl,
 }) => {
   return (
     <div className="border-b border-border bg-white">
-      <div className="px-8 py-3 flex items-center">
+      <div className="px-8 py-3 flex flex-wrap items-center gap-3">
         {/* Page title — fixed width left column */}
         {pageTitle && (
-          <h1 className="text-lg font-semibold text-[#00274C] w-[120px] flex-shrink-0">{pageTitle}</h1>
+          <h1 className="text-lg font-semibold text-[#00274C] w-full sm:w-auto sm:min-w-[120px] flex-shrink-0">{pageTitle}</h1>
         )}
 
         {/* Selectors — centered, evenly spaced */}
-        <div className="flex items-center gap-5 flex-1">
-          <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-3 flex-1 min-w-0">
+          <div className="flex items-center gap-2 bg-surface rounded-lg px-3 py-2 border border-border flex-shrink-0">
             <GraduationCap className="w-4 h-4 text-foreground-secondary flex-shrink-0" />
             <select
               value={courseId ?? ''}
@@ -51,7 +53,7 @@ export const InstructorTaskBar: React.FC<InstructorTaskBarProps> = ({
             </select>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 bg-surface rounded-lg px-3 py-2 border border-border flex-shrink-0">
             <BookOpen className="w-4 h-4 text-foreground-secondary flex-shrink-0" />
             <select
               value={examId ?? ''}
@@ -62,18 +64,24 @@ export const InstructorTaskBar: React.FC<InstructorTaskBarProps> = ({
               {exams.map(e => <option key={e.id} value={e.id}>{e.name}</option>)}
             </select>
           </div>
+
+          {extraControl && (
+            <div className="flex items-center gap-2 bg-surface rounded-lg px-3 py-2 border border-border flex-shrink-0">
+              {extraControl}
+            </div>
+          )}
         </div>
 
         {/* Stats — right-aligned, fixed spacing */}
-        <div className="flex items-center gap-5 flex-shrink-0">
+        <div className="flex flex-wrap items-center gap-3 w-full xl:w-auto xl:justify-end xl:ml-auto">
           {studentCount !== undefined && (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 bg-surface rounded-lg px-3 py-2 border border-border flex-shrink-0">
               <Users className="w-4 h-4 text-foreground-secondary flex-shrink-0" />
               <span className="text-sm text-foreground whitespace-nowrap">{studentCount} students</span>
             </div>
           )}
           {conceptCount !== undefined && (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 bg-surface rounded-lg px-3 py-2 border border-border flex-shrink-0">
               <TrendingUp className="w-4 h-4 text-foreground-secondary flex-shrink-0" />
               <span className="text-sm text-foreground whitespace-nowrap">{conceptCount} concepts</span>
             </div>
