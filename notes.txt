@@ -1,1 +1,3 @@
-the knowedge graph can be uploaded to canvas and so can everything else, add support for that as well , 
+1. should open ai's api key be frontend or backend env?
+2. the open ai api key is named by OPENAI_API_KEY
+3. the database url is named DATABASE_URL
