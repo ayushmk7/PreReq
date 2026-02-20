@@ -46,10 +46,10 @@ export const D3Heatmap: React.FC<D3HeatmapProps> = ({
 
     // Tooltip
     const tooltip = d3
-      .select(container)
+      .select('body')
       .append('div')
       .attr('class', 'heatmap-tooltip')
-      .style('position', 'absolute')
+      .style('position', 'fixed')
       .style('pointer-events', 'none')
       .style('background', '#00274C')
       .style('color', '#fff')
@@ -58,8 +58,30 @@ export const D3Heatmap: React.FC<D3HeatmapProps> = ({
       .style('font-size', '12px')
       .style('font-family', 'system-ui, -apple-system, sans-serif')
       .style('opacity', 0)
-      .style('z-index', '20')
+      .style('z-index', '60')
       .style('white-space', 'nowrap');
+
+    const positionTooltip = (event: MouseEvent) => {
+      const tooltipNode = tooltip.node();
+      if (!tooltipNode) return;
+      const tooltipRect = tooltipNode.getBoundingClientRect();
+      const offset = 14;
+      const viewportPadding = 8;
+
+      let left = event.clientX + offset;
+      let top = event.clientY + offset;
+
+      if (left + tooltipRect.width > window.innerWidth - viewportPadding) {
+        left = event.clientX - tooltipRect.width - offset;
+      }
+      if (top + tooltipRect.height > window.innerHeight - viewportPadding) {
+        top = event.clientY - tooltipRect.height - offset;
+      }
+
+      tooltip
+        .style('left', `${Math.max(viewportPadding, left)}px`)
+        .style('top', `${Math.max(viewportPadding, top)}px`);
+    };
 
     // Column headers (student labels)
     svg
@@ -141,16 +163,13 @@ export const D3Heatmap: React.FC<D3HeatmapProps> = ({
               `${d.student.name}<br/>` +
               `Readiness: ${Math.round(d.value * 100)}%`
           )
-          .style('left', `${event.offsetX + 14}px`)
-          .style('top', `${event.offsetY - 14}px`)
           .transition()
           .duration(100)
           .style('opacity', 1);
+        positionTooltip(event as MouseEvent);
       })
       .on('mousemove', function (event) {
-        tooltip
-          .style('left', `${event.offsetX + 14}px`)
-          .style('top', `${event.offsetY - 14}px`);
+        positionTooltip(event as MouseEvent);
       })
       .on('mouseleave', function () {
         d3.select(this)

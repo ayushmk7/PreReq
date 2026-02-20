@@ -208,9 +208,9 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({ onConc
               </button>
             </div>
             <div className="grid grid-cols-4 gap-6">
-              <ConceptLensSlider label="Direct Weight (α)" value={parameters.alpha} min={0} max={1} step={0.05} onChange={(v) => setParameters({ ...parameters, alpha: v })} description="Direct mastery weight" />
-              <ConceptLensSlider label="Prerequisite Weight (β)" value={parameters.beta} min={0} max={1} step={0.05} onChange={(v) => setParameters({ ...parameters, beta: v })} description="Prerequisite penalty factor" />
-              <ConceptLensSlider label="Downstream Weight (γ)" value={parameters.gamma} min={0} max={1} step={0.05} onChange={(v) => setParameters({ ...parameters, gamma: v })} description="Future concept boost" />
+              <ConceptLensSlider label="Direct Readiness Weight (α)" value={parameters.alpha} min={0} max={1} step={0.05} onChange={(v) => setParameters({ ...parameters, alpha: v })} description="Multiplies direct readiness in final score" />
+              <ConceptLensSlider label="Prerequisite Penalty Weight (β)" value={parameters.beta} min={0} max={1} step={0.05} onChange={(v) => setParameters({ ...parameters, beta: v })} description="Multiplies prerequisite penalty (subtracted)" />
+              <ConceptLensSlider label="Downstream Boost Weight (γ)" value={parameters.gamma} min={0} max={1} step={0.05} onChange={(v) => setParameters({ ...parameters, gamma: v })} description="Multiplies downstream boost in final score" />
               <ConceptLensSlider label="Readiness Threshold" value={parameters.threshold} min={0} max={1} step={0.05} onChange={(v) => setParameters({ ...parameters, threshold: v })} description="Mastery cutoff score" />
             </div>
           </motion.div>

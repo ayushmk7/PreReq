@@ -145,7 +145,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
                 </h1>
                 
                 <p className="text-xl text-foreground-secondary leading-relaxed max-w-2xl mx-auto">
-                  ConceptLens analyzes student assessment data to reveal conceptual weaknesses, 
+                  PreReq analyzes student assessment data to reveal conceptual weaknesses, 
                   prerequisite gaps, and personalized intervention strategies—backed by dependency-aware AI.
                 </p>
               </motion.div>
@@ -188,16 +188,16 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
                 className="flex flex-wrap gap-8 justify-center pt-8 text-sm text-foreground-secondary"
               >
                 <div className="flex items-center gap-2">
-                  <div className="flex items-center gap-1 text-[#FFCB05]">
-                    <span className="w-1.5 h-1.5 rounded-full bg-current"></span>
-                    <span className="w-1.5 h-1.5 rounded-full bg-current"></span>
-                  </div>
+                  <Network className="w-4 h-4 text-[#FFCB05]" />
+                  Dependency-aware concept mapping
+                </div>
+                <div className="flex items-center gap-2">
                   <Shield className="w-4 h-4 text-[#FFCB05]" />
                   Institutional-grade security
-                  <div className="flex items-center gap-1 text-[#FFCB05]">
-                    <span className="w-1.5 h-1.5 rounded-full bg-current"></span>
-                    <span className="w-1.5 h-1.5 rounded-full bg-current"></span>
-                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <TrendingDown className="w-4 h-4 text-[#FFCB05]" />
+                  Root-cause intervention insights
                 </div>
               </motion.div>
             </div>
@@ -354,7 +354,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
           <div className="max-w-6xl mx-auto">
             <div className="flex flex-col md:flex-row justify-between items-center gap-6">
               <p className="text-sm text-foreground-secondary">
-                ConceptLens © 2026 — AI-Powered Assessment Intelligence for Higher Education
+                PreReq © 2026 — AI-Powered Assessment Intelligence for Higher Education
               </p>
               <div className="flex gap-6 text-sm text-foreground-secondary">
                 <a href="#" className="hover:text-[#FFCB05] transition-colors">Privacy Policy</a>

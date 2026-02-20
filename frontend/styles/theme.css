@@ -2,7 +2,7 @@
 
 :root {
   --font-size: 16px;
-  /* ConceptLens UMich Color System */
+  /* PreReq UMich Color System */
   --umich-blue: #00274C;
   --umich-maize: #FFCB05;
   
@@ -58,7 +58,7 @@
 }
 
 .dark {
-  /* ConceptLens UMich Color System - same for both modes */
+  /* PreReq UMich Color System - same for both modes */
   --background: #FFFFFF;
   --surface: #F8F9FA;
   --elevated: #FFFFFF;

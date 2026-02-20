@@ -21,8 +21,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate }) => 
   return (
     <div className="fixed left-0 top-0 h-screen w-20 bg-[#00274C] border-r border-[#003366] flex flex-col items-center py-6 z-40">
       {/* Logo */}
-      <div className="mb-8">
-        <ConceptLensLogoUMich size={48} />
+      <div className="mb-8 -mt-2">
+        <ConceptLensLogoUMich size={72} />
       </div>
 
       {/* Navigation */}

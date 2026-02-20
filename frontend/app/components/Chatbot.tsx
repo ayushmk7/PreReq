@@ -10,7 +10,7 @@ interface ChatbotProps {
 export const Chatbot: React.FC<ChatbotProps> = ({ examId }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Array<{ text: string; isBot: boolean }>>([
-    { text: "Hi! I'm your ConceptLens assistant. Ask me anything about your exam data.", isBot: true },
+    { text: "Hi! I'm your PreReq assistant. Ask me anything about your exam data.", isBot: true },
   ]);
   const [input, setInput] = useState('');
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -81,7 +81,7 @@ export const Chatbot: React.FC<ChatbotProps> = ({ examId }) => {
               <div className="flex items-center gap-3">
                 <div className="w-3 h-3 rounded-full bg-[#FFCB05] animate-pulse" />
                 <div>
-                  <h3 className="font-medium">ConceptLens Assistant</h3>
+                  <h3 className="font-medium">PreReq Assistant</h3>
                   <p className="text-xs opacity-75">{sending ? 'Thinking...' : 'Online'}</p>
                 </div>
               </div>
