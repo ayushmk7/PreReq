@@ -1,0 +1,602 @@
+ConceptLens
+AI-Powered Assessment Intelligence for Higher Education
+Positioning: Faculty Decision Intelligence + Student Metacognition
+Tagline: Turn exams into conceptual insight -- at scale, transparently, and fairly.
+
+
+1. Executive Summary
+ConceptLens is an AI-powered Assessment Intelligence platform that transforms raw exam performance data into structured, dependency-aware concept readiness maps. It is designed for large STEM gateway courses at public universities where traditional assessment tools fail to explain why performance patterns occur.
+Traditional tools provide question averages and grade distributions. They cannot distinguish whether poor performance on a topic stems from a misunderstanding of that topic itself, from weak prerequisite knowledge, or from procedural errors. ConceptLens closes this gap by computing concept-level readiness scores, tracing foundational gaps through a prerequisite dependency graph, clustering misconceptions, prioritizing instructor interventions, and generating personalized student study plans.
+The system augments instructor judgment. It does not assign grades, rank students, or make automated academic decisions.
+
+2. Problem Statement
+2.1 The Structural Gap in Assessment
+Assessment tools are question-centric. Learning is concept-centric and dependency-structured. When students perform poorly on a composite topic, instructors cannot determine from raw scores alone whether the high-level concept itself is misunderstood, whether foundational prerequisites are weak, or whether procedural errors masked conceptual understanding. This ambiguity leads to inefficient reteaching and poorly targeted interventions.
+2.2 Student Feedback Gap
+Students typically receive a numeric score and possibly brief written comments. They do not receive structured concept-level feedback, a prerequisite-ordered study plan, or insight into why they struggled. Without this, students study inefficiently, often reviewing material they already understand while ignoring the actual root cause of their errors.
+ConceptLens addresses both gaps simultaneously by connecting exam performance to a structured concept dependency graph and surfacing actionable intelligence for both instructors and students.
+3. Product Objectives
+3.1 Primary Objectives
+Reveal root causes behind exam performance patterns using dependency-aware inference.
+Deliver actionable instructor insights within minutes of grading completion.
+Provide interpretable, personalized metacognitive tools for students.
+Maintain fairness, transparency, and full instructor control over all parameters.
+Scale to large courses (1,200+ students) with sub-10-second processing.
+3.2 Non-Objectives (Explicit Exclusions)
+Replacing instructors or GSIs in any decision-making capacity.
+Automatically modifying, adjusting, or curving grades.
+Ranking students against each other.
+Proctoring, surveillance, or cheating detection.
+Using demographic data for any computation.
+4. Target Users
+4.1 Instructor Persona
+Context: Teaches a STEM gateway course with 300 to 1,500 students. Manages multiple GSIs. Has limited turnaround time between exam grading and the next lecture. Needs to identify foundational breakdowns across the class quickly to decide what to reteach and how to allocate review session time.
+Needs: Identify which foundational concepts are causing cascading failures. Detect systemic weaknesses that affect large portions of the class. Prioritize which interventions will have the highest impact per unit of time.
+Workflow: Uploads graded exam CSV. Optionally edits or uploads concept graph. Views dashboard within minutes. Drills into specific weak concepts to see root-cause traces. Exports or shares student reports.
+4.2 Student Persona
+Context: Receives a score without structured diagnostic feedback. Does not know which specific concepts are weak or which prerequisites to revisit first.
+Needs: Understand which concepts are weak. Identify which prerequisite gaps are causing downstream failures. Receive a study plan ordered by prerequisite dependencies so they study in the right sequence.
+Workflow: Receives link to personal report (no login required for MVP; report accessed via unique token). Views concept readiness graph. Follows the prerequisite-ordered study plan.
+
+5. Solution Overview
+ConceptLens generates a Concept Readiness Graph for each individual student and for the entire class aggregate. The graph is a directed acyclic graph (DAG) where nodes represent concepts and directed edges represent prerequisite dependencies.
+5.1 Node Properties
+Property
+Type
+Description
+concept_id
+string
+Unique identifier for the concept
+label
+string
+Human-readable concept name
+readiness_score
+float [0, 1]
+Final computed readiness after propagation
+direct_readiness
+float [0, 1]
+Weighted average of tagged question scores
+confidence
+enum: high/medium/low
+Based on evidence coverage and variance
+evidence_breakdown
+object
+Direct contribution, upstream penalty, downstream boost
+explanation_trace
+string[]
+Human-readable reasoning chain
+
+5.2 Edge Properties
+Property
+Type
+Description
+source
+string
+Prerequisite concept_id
+target
+string
+Dependent concept_id
+weight
+float [0, 1]
+Dependency strength (default 0.5)
+rationale
+string (optional)
+Instructor-provided reason for the dependency
+
+5.3 Outputs
+Instructor Decision Dashboard: Class-level heatmap, foundational gap alerts, root-cause tracing, misconception clustering, intervention recommendations.
+Student Metacognitive Report: Personal concept graph, top weak concepts, prerequisite-ordered study plan, confidence indicators.
+
+6. Functional Requirements
+6.1 Data Ingestion
+The system accepts three input files. All files are validated on upload before any computation begins.
+6.1.1 Exam Scores File (Required)
+Format: CSV. Required fields: StudentID (string), QuestionID (string), Score (numeric). Optional field: MaxScore (numeric, defaults to 1.0 if absent).
+Validation rules:
+All rows must have non-null StudentID and QuestionID.
+Score must be numeric and in range [0, MaxScore].
+No duplicate (StudentID, QuestionID) pairs.
+If MaxScore is provided, it must be > 0 for all rows.
+File size limit: 50MB. Row limit: 500,000 rows.
+6.1.2 Question-to-Concept Mapping File (Required)
+Format: CSV. Required fields: QuestionID (string), ConceptID (string). Optional field: Weight (float, default 1.0). A single question may map to multiple concepts. Each mapping row represents one question-concept association.
+Validation: Every QuestionID in the scores file must appear in the mapping file. ConceptIDs must be consistent with the concept graph.
+6.1.3 Concept Dependency Graph (Optional)
+Format: JSON or CSV edges. JSON schema:
+{
+  "nodes": [{ "id": "C1", "label": "Derivatives" }],
+  "edges": [{ "source": "C0", "target": "C1", "weight": 0.7 }]
+}
+CSV format: source, target, weight (optional, default 0.5).
+Validation: Graph must be a DAG (no cycles). All concept IDs referenced in edges must exist as nodes. Edge weights must be in [0, 1]. The system runs a topological sort on upload and rejects graphs with cycles, returning the cycle path in the error message.
+If no graph is uploaded, the system creates isolated nodes for each concept with no edges. The instructor can then add edges manually through the UI.
+6.2 Concept Graph Management
+The concept graph is the core data structure. It is stored per course and per exam, with version history.
+Add/remove nodes: Instructor can add new concept nodes or remove unused ones.
+Add/remove/edit edges: Instructor can create or delete prerequisite relationships and adjust weights.
+Cycle detection: Any edit that would introduce a cycle is rejected with an explanatory error.
+Version control: Each save creates a new version. Instructor can revert to any previous version. Versions are timestamped and annotated.
+Clone: Instructor can clone a graph from a previous exam as the starting point for a new exam.
+6.3 Readiness Inference Engine
+The inference engine computes a readiness score for each (student, concept) pair. The computation has four stages.
+6.3.1 Stage 1: Direct Readiness
+For each concept C and student S, direct readiness is the weighted average of normalized scores on all questions tagged to C:
+DirectReadiness(S, C) = SUM(w_q * (score_q / maxscore_q)) / SUM(w_q)
+where w_q is the weight from the question-to-concept mapping and the sum is over all questions q tagged to concept C. If no questions are tagged to C, DirectReadiness is null and the concept is marked as "inferred only."
+6.3.2 Stage 2: Upstream Weakness Propagation (Prerequisite Penalty)
+If a prerequisite concept P is weak, its dependent concept C receives a penalty proportional to both the dependency strength and the magnitude of weakness:
+PrerequisitePenalty(S, C) = SUM over parents P of (edge_weight(P, C) * max(0, threshold - DirectReadiness(S, P)))
+The threshold parameter (default 0.6) defines the readiness level below which a prerequisite is considered "weak." Only prerequisites below this threshold contribute a penalty. This prevents strong prerequisites from generating noise.
+6.3.3 Stage 3: Downstream Validation Boost
+If a student performs well on advanced concepts that depend on P, this provides indirect evidence that P is understood, even if P itself has limited direct evidence:
+DownstreamBoost(S, P) = SUM over children D of (validation_weight * DirectReadiness(S, D))
+validation_weight is a fraction of the edge weight (default: edge_weight * 0.4). The boost is capped at 0.2 to prevent advanced performance from fully overriding direct evidence of weakness.
+6.3.4 Stage 4: Final Readiness Computation
+FinalReadiness(S, C) = clamp([0, 1], alpha * DirectReadiness(S, C)
+                        - beta * PrerequisitePenalty(S, C)
+                        + gamma * DownstreamBoost(S, C))
+Default parameters: alpha = 1.0, beta = 0.3, gamma = 0.2. The threshold for upstream penalty is 0.6 by default. All four parameters are instructor-adjustable per exam via the dashboard settings panel.
+Computation order: The engine performs a topological sort on the DAG, then processes concepts from leaves (no prerequisites) to roots. This ensures all upstream readiness values are computed before any concept that depends on them.
+6.4 Confidence Estimation
+Each readiness score is accompanied by a confidence level: High, Medium, or Low. Confidence is computed from three factors:
+Factor
+High
+Medium
+Low
+Tagged questions for this concept
+>= 3
+2
+0 or 1
+Total points coverage
+>= 10 pts
+5-9 pts
+< 5 pts
+Variance across related concepts
+< 0.15
+0.15-0.30
+> 0.30
+
+The overall confidence is the minimum of the three individual levels. Confidence is displayed alongside every readiness score to prevent overinterpretation of weak evidence.
+
+6.5 Instructor Dashboard Requirements
+6.5.1 Class-Level Concept Heatmap
+A matrix where rows are concepts (ordered by dependency depth) and columns are readiness buckets (0-20, 20-40, 40-60, 60-80, 80-100). Each cell shows the count and percentage of students in that bucket. Color intensity maps to the count. The heatmap is the primary entry point for instructor analysis.
+6.5.2 Foundational Gap Alerts
+An alert is triggered when a foundational concept (a concept with multiple dependents) has class-average readiness below a configurable threshold (default 0.5). Alerts are sorted by impact, defined as the number of downstream concepts affected multiplied by the number of students below threshold. Each alert includes: concept name, class average readiness, number of students below threshold, list of downstream concepts that may be affected, and a recommended action (review session, supplementary material, etc.).
+6.5.3 Root-Cause Tracing
+When an instructor clicks on any weak concept in the heatmap, the system displays a root-cause trace panel showing: direct performance on the selected concept, contributing prerequisite weaknesses (with their readiness scores), the contribution weight of each prerequisite to the penalty, the number of affected students, and a waterfall-style visualization showing how direct readiness was modified by upstream penalties and downstream boosts to arrive at the final score.
+6.5.4 Misconception Clustering
+Students are clustered by their concept readiness vectors using k-means (default k=4, configurable). Each cluster is labeled with its distinguishing weak concepts. The instructor sees: cluster size, cluster centroid readiness values, the top 3 distinguishing weak concepts per cluster, and suggested targeted interventions per cluster. The clustering uses only concept readiness values -- no demographic data.
+6.5.5 Intervention Recommendation Module
+The system generates a prioritized list of recommended interventions ranked by estimated impact. Impact is estimated as: (number of students affected) * (number of downstream concepts) * (1 - current readiness). Each recommendation includes: the target concept, estimated student reach, rationale, and suggested format (review session, practice problems, office hours focus).
+6.6 Student Report Requirements
+Personal concept graph: Interactive DAG with nodes colored by readiness (green > 0.7, yellow 0.4-0.7, red < 0.4).
+Top weak concepts: Ordered list of the 5 weakest concepts with readiness scores and confidence levels.
+Prerequisite-ordered study plan: A sequential list of concepts to review, ordered by topological sort so prerequisites come first. Each item includes the concept name, current readiness, why it was flagged, and a brief explanation.
+Confidence indicators: Each score shows its confidence level so students understand which assessments are well-supported vs. approximate.
+Students must NOT see: peer comparisons, rankings, percentile positions, predictive risk labels, or any demographic-correlated analysis.
+
+7. Technical Architecture
+7.1 Technology Stack (MVP)
+Layer
+Technology
+Justification
+Frontend
+Next.js 14 (App Router)
+Server components for fast initial load; React for interactive dashboard
+Graph Visualization
+D3.js (force-directed layout) or Visx
+Mature, flexible graph rendering with zoom/pan and custom node styling
+Backend API
+FastAPI (Python 3.11+)
+Async support, automatic OpenAPI docs, type validation via Pydantic
+Graph Engine
+NetworkX
+Topological sort, cycle detection, path analysis, DAG validation
+Data Processing
+pandas + numpy
+Vectorized readiness computation across all students
+Clustering
+scikit-learn (KMeans)
+Standard, well-tested clustering with easy parameter tuning
+Database (MVP)
+SQLite
+Zero config, sufficient for single-instance MVP
+Database (Scale)
+PostgreSQL
+JSONB for graph storage, concurrent access, full-text search
+File Storage
+Local filesystem (MVP)
+Uploaded CSVs and computed results stored as files
+Auth (MVP)
+Token-based (unique URL per student report)
+No login required for students; instructor uses basic auth
+
+7.2 System Flow (Detailed)
+The processing pipeline executes in the following order:
+Step 1 (Upload): Instructor uploads exam scores CSV and question-to-concept mapping CSV via the dashboard. Files are validated (schema check, type check, range check, duplicate check). Errors are returned with row numbers and descriptions.
+Step 2 (Graph): Instructor uploads a concept dependency graph JSON/CSV, or edits an existing graph in the visual editor. The graph is validated for DAG structure (topological sort). If a cycle is detected, the offending edges are highlighted.
+Step 3 (Compute): Backend constructs the readiness computation. For each student, it computes DirectReadiness per concept, then iterates through the topological order to apply upstream penalties and downstream boosts. Class aggregates are computed in parallel. The entire computation is vectorized using numpy where possible.
+Step 4 (Store): Results are written to the database: per-student readiness vectors, class aggregates, confidence levels, explanation traces, and cluster assignments.
+Step 5 (Render): Dashboard queries the stored results and renders the heatmap, alerts, and tracing views. Student reports are generated on-demand via unique tokens.
+7.3 Data Models
+7.3.1 Database Schema (Core Tables)
+courses(id, name, created_at)
+exams(id, course_id, name, created_at)
+concept_graphs(id, exam_id, version, graph_json, created_at)
+questions(id, exam_id, question_id_external, max_score)
+question_concept_map(id, question_id, concept_id, weight)
+scores(id, exam_id, student_id_external, question_id, score)
+readiness_results(id, exam_id, student_id_external, concept_id,
+  direct_readiness, prerequisite_penalty, downstream_boost,
+  final_readiness, confidence, explanation_trace_json)
+class_aggregates(id, exam_id, concept_id, mean_readiness,
+  median_readiness, std_readiness, below_threshold_count)
+clusters(id, exam_id, cluster_label, centroid_json, student_count)
+cluster_assignments(id, exam_id, student_id_external, cluster_id)
+student_tokens(id, exam_id, student_id_external, token, created_at)
+parameters(id, exam_id, alpha, beta, gamma, threshold)
+7.3.2 Key Data Structures (In-Memory During Computation)
+# Student-concept matrix: shape (num_students, num_concepts)
+# Each cell = DirectReadiness(student, concept) or NaN if no evidence
+readiness_matrix: np.ndarray
+
+# Adjacency matrix: shape (num_concepts, num_concepts)
+# adj[i][j] = edge weight from concept i to concept j, 0 if no edge
+adjacency: np.ndarray
+
+# Topological order: list of concept indices
+topo_order: list[int]
+7.4 API Specification
+Method
+Endpoint
+Request Body
+Response
+POST
+/api/v1/exams/{exam_id}/scores
+Multipart CSV upload
+{ status, row_count, errors[] }
+POST
+/api/v1/exams/{exam_id}/mapping
+Multipart CSV upload
+{ status, concept_count, errors[] }
+POST
+/api/v1/exams/{exam_id}/graph
+JSON body or CSV upload
+{ status, node_count, edge_count, is_dag }
+PATCH
+/api/v1/exams/{exam_id}/graph
+{ add_edges, remove_edges, add_nodes, remove_nodes }
+{ status, is_dag, cycle_path? }
+POST
+/api/v1/exams/{exam_id}/compute
+{ alpha, beta, gamma, threshold }
+{ status, students_processed, time_ms }
+GET
+/api/v1/exams/{exam_id}/dashboard
+Query params: concept_id?
+{ heatmap, alerts[], aggregates[] }
+GET
+/api/v1/exams/{exam_id}/dashboard/trace/{concept_id}
+None
+{ direct, upstream[], downstream[], waterfall }
+GET
+/api/v1/exams/{exam_id}/clusters
+None
+{ clusters[], assignments_summary }
+GET
+/api/v1/reports/{token}
+None
+{ student report JSON }
+GET
+/api/v1/exams/{exam_id}/parameters
+None
+{ alpha, beta, gamma, threshold }
+PUT
+/api/v1/exams/{exam_id}/parameters
+{ alpha, beta, gamma, threshold }
+{ status }
+
+
+8. Frontend Specifications
+8.1 Pages and Routes
+Route
+Page
+Description
+/
+Landing / Login
+Instructor login, course selection
+/courses/{id}/exams
+Exam List
+List of exams for a course, upload new exam
+/exams/{id}/upload
+Upload Wizard
+Step-by-step upload: scores, mapping, graph
+/exams/{id}/graph
+Graph Editor
+Visual DAG editor with drag-and-drop nodes and edges
+/exams/{id}/dashboard
+Instructor Dashboard
+Heatmap, alerts, tracing, clusters
+/exams/{id}/dashboard/trace/{concept}
+Root-Cause Trace
+Detailed waterfall for one concept
+/exams/{id}/settings
+Exam Settings
+Parameter tuning (alpha, beta, gamma, threshold)
+/report/{token}
+Student Report
+Public page (no login), personal concept graph and study plan
+
+8.2 Key UI Components
+ConceptHeatmap: Grid component. Rows = concepts sorted by topo depth. Columns = readiness buckets. Cells are clickable to open the trace view. Color scale: red (low readiness) to green (high readiness).
+ConceptDAGViewer: D3 force-directed graph. Nodes sized by student count below threshold. Nodes colored by class-average readiness. Edges drawn as arrows with thickness proportional to weight. Supports zoom, pan, and click-to-select.
+WaterfallChart: Stacked bar chart showing how DirectReadiness is modified by penalty and boost to produce FinalReadiness. Uses Recharts or D3.
+StudyPlanList: Ordered list component. Each item shows concept name, readiness score (color-coded), confidence badge, and a one-sentence explanation.
+GraphEditor: Interactive DAG editor. Nodes are draggable. Edges are created by drawing from one node to another. Weight is set via a slider on the edge. Cycle detection runs on every edit and blocks invalid additions with an inline error.
+9. Non-Functional Requirements
+9.1 Performance
+Full readiness computation for 1,200 students x 30 concepts x 50 questions must complete in under 10 seconds.
+Dashboard page load (after computation) must be under 2 seconds.
+Graph editor interactions (add node, add edge, cycle check) must respond in under 200ms.
+Student report generation must complete in under 1 second.
+9.2 Reliability
+Computation is deterministic: same inputs always produce the same outputs.
+All upload and compute endpoints return structured error objects with field-level detail.
+Unit tests must cover: topological sort, cycle detection, readiness formula (including edge cases: null direct readiness, single-concept graph, disconnected nodes), confidence computation, and CSV validation.
+Integration tests must cover: full upload-compute-dashboard pipeline, parameter changes trigger recomputation, graph edits trigger validation.
+9.3 Privacy and Security
+Minimal PII: only StudentID (which may be anonymized). No names, emails, or demographics stored.
+Role-based access: instructors see all students; students see only their own report.
+Student report tokens are 128-bit random UUIDs, non-guessable, and expire after a configurable period (default 30 days).
+All API endpoints require authentication except the student report endpoint (which uses token-based access).
+HTTPS required in production.
+9.4 Fairness
+No demographic data is collected, stored, or used in any computation.
+No student ranking or percentile computation.
+All scoring formulas are transparent and displayed to both instructors and students.
+Instructor-adjustable parameters ensure the system adapts to course context rather than imposing a fixed model.
+Confidence bands are always displayed to prevent overinterpretation.
+
+10. Success Metrics
+10.1 Technical Metrics
+Metric
+Target
+Measurement Method
+Computation time (1200 students)
+< 10 seconds
+Server-side timer on /compute endpoint
+Dashboard load time
+< 2 seconds
+Lighthouse or browser performance API
+Graph rendering stability
+No crashes on graphs up to 50 nodes / 100 edges
+Automated browser test
+Readiness output validity
+All values in [0, 1]; no NaN in final output
+Unit test assertions
+CSV validation accuracy
+100% of malformed files rejected with correct error
+Test suite with 20+ malformed CSV variants
+
+10.2 Educational Impact Metrics (Post-MVP)
+Metric
+Target
+Measurement Method
+Predicted weakness correlation
+r > 0.5 between flagged concepts and next-exam errors
+Longitudinal comparison across two exams
+Repeat error reduction
+15% fewer repeated concept errors exam-over-exam
+Concept-level error tracking
+Instructor diagnostic value
+80%+ instructors rate insights as useful
+Post-use survey (Likert scale)
+Student feedback clarity
+70%+ students rate study plan as helpful
+Post-use survey (Likert scale)
+
+10.3 Business KPIs
+KPI
+Target
+Timeframe
+Instructor time saved per exam
+2+ hours
+Per exam cycle
+Pass rate improvement on gateway concepts
+5-10% increase
+Semester over semester
+Pilot adoption
+3+ departments at 1 university
+Year 1
+Institutional license conversion
+1 university-wide license
+Year 2
+
+11. Business Model
+11.1 Target Market
+Primary: Large public R1 universities with STEM gateway courses (calculus, physics, chemistry, CS intro). These courses typically have 300-1,500 students, high DFW rates, and institutional pressure to improve outcomes. Secondary: Online degree programs and community colleges with similar scale challenges.
+11.2 Buyer Persona
+Primary buyer: Department chair or director of undergraduate studies who controls course-level tooling budgets. Secondary buyer: Academic analytics office or provost office for institutional licenses. Decision influencer: Individual instructor who runs a pilot.
+11.3 Revenue Model
+Tier
+Pricing
+Includes
+Free Pilot
+$0 (1 semester, 1 course)
+Full MVP features, email support
+Per-Course
+$500-1,500/semester/course
+Full features, priority support, LMS integration
+Department
+$5,000-15,000/year
+Unlimited courses in one department
+Institutional
+Custom pricing
+University-wide license, SSO, dedicated support, SLA
+
+11.4 Go-to-Market
+Offer free pilots to 3-5 instructors at partner universities.
+Collect usage data and testimonials during pilot.
+Present results at education conferences (SIGCSE, ASEE).
+Pursue LMS marketplace listings (Canvas, Blackboard, Moodle) in Phase 2.
+12. Competitive Differentiation
+Capability
+Standard LMS Tools
+ConceptLens
+Granularity
+Question-level averages
+Concept-level readiness with dependency structure
+Root-cause analysis
+Not available
+Prerequisite penalty tracing with waterfall visualization
+Student feedback
+Numeric score
+Personalized concept graph + study plan
+Intervention targeting
+Manual instructor review
+Automated impact-ranked intervention recommendations
+Misconception detection
+Not available
+K-means clustering on readiness vectors
+Transparency
+Black-box item analysis
+Open formula with adjustable parameters
+
+ConceptLens is an Assessment Intelligence layer, not a grading tool. It sits on top of existing grading workflows and adds diagnostic depth that no current LMS provides.
+13. Ethical Safeguards
+No automated grading decisions. The system provides intelligence; the instructor decides.
+No student ranking or percentile computation at any point.
+All readiness calculations are transparent and reproducible. The formula and parameters are visible to instructors.
+Confidence bands are displayed on every score to prevent overinterpretation.
+Instructor retains full control over concept graph structure and all tunable parameters.
+No demographic data is collected or used.
+Student reports contain no comparative or predictive risk language.
+14. Risks and Mitigations
+Risk
+Likelihood
+Impact
+Mitigation
+Incorrect concept mapping leads to misleading readiness scores
+Medium
+High
+Editable graph with version control; confidence bands flag low-evidence scores; instructor review step before publishing results
+Overconfidence in AI inference by instructors or students
+Medium
+Medium
+Confidence levels on every score; explanation traces show evidence sources; documentation emphasizes augmentation not automation
+System perceived as basic analytics tool rather than intelligence layer
+Medium
+Medium
+Emphasize root-cause tracing and dependency-aware analysis in all marketing; demo the waterfall trace feature as primary differentiator
+Privacy concerns around student data
+Low
+High
+Minimal PII storage; anonymized IDs; role-based access; token-based student reports; HTTPS; configurable token expiry
+Scalability issues beyond MVP
+Low
+Medium
+Vectorized numpy computation; PostgreSQL migration path defined; stateless API design allows horizontal scaling
+Poor graph quality from instructors unfamiliar with DAG modeling
+Medium
+Medium
+Provide template graphs for common course types; LLM-assisted graph generation planned for Phase 2; in-app guidance for graph construction
+
+
+15. Implementation Roadmap
+Phase 1: MVP (Weeks 1-6)
+CSV upload with full validation (scores, mapping, graph).
+Manual concept graph creation and editing via visual editor.
+Readiness inference engine (all 4 stages).
+Instructor dashboard: heatmap, alerts, root-cause tracing.
+Student report: concept graph, study plan, confidence indicators.
+SQLite database, basic auth for instructors, token-based student access.
+Phase 2: Integration (Weeks 7-12)
+LMS integration (Canvas API for grade export/import).
+LLM-assisted concept tagging: given a question text, suggest concept tags.
+LLM-assisted graph generation: given a list of concepts, suggest prerequisite edges.
+Misconception clustering with cluster-level intervention suggestions.
+PostgreSQL migration.
+Phase 3: Longitudinal (Months 4-6)
+Multi-exam tracking: readiness trends over time per student and per class.
+Curriculum diagnostics: identify concepts that are consistently weak across semesters.
+Exportable reports (PDF, CSV) for institutional review.
+Phase 4: Institutional (Months 6-12)
+Multi-department analytics dashboard.
+SSO integration (SAML/OAuth).
+SLA-backed deployment options.
+API for third-party integrations.
+16. Rubric Alignment Summary
+Criteria
+How ConceptLens Addresses It
+Technical Architecture
+Real inference engine with a defined 4-stage computation pipeline. Vectorized numpy processing for scalability. Full database schema. Defined API specification. Deterministic outputs. Clear success metrics with targets and measurement methods.
+Functionality & Feasibility
+Uses existing instructor workflows (CSV export from LMS). Technology choices are standard and well-documented. Phased roadmap from MVP to institutional scale. AI augments instructor judgment, never replaces it. All major risks identified with concrete mitigations.
+Business Relevance
+Defined buyer personas (department chairs, analytics offices). Revenue model with four tiers. Quantitative KPIs with timeframes. Go-to-market strategy through free pilots and conference presentations. Clear differentiation from LMS analytics.
+Customer Value & Impact
+Sharp instructor and student personas with specific workflows. Addresses a real structural gap (question-centric vs. concept-centric assessment). Ethical safeguards built into the core design. No ranking, no demographic data, no automated decisions.
+Innovation & Originality
+Dependency-aware readiness inference is not available in any current LMS tool. Upstream penalty propagation and downstream validation boost are novel mechanisms. Root-cause waterfall tracing is a new visualization paradigm for assessment. Student metacognition via concept graphs is underexplored in EdTech.
+
+
+17. Feedback and Scoring Assessment
+Below is a self-assessment of ConceptLens against the provided rubric criteria, with current scores and specific improvements needed to reach 30/30.
+17.1 Technical Architecture -- Current Score: 4/5
+Strengths: The PRD defines a coherent 4-stage inference pipeline with explicit formulas. The database schema covers all required entities. The API specification is complete with request/response types. Success metrics are defined with numeric targets and measurement methods. Scalability is addressed through vectorized computation and a PostgreSQL migration path.
+Gap: The MVP does not yet include a working prototype or benchmark results. Computation performance claims (sub-10s for 1,200 students) are estimated but not validated.
+To reach 5/5: Build and benchmark the inference engine. Run it on synthetic data at target scale (1,200 students, 30 concepts, 50 questions) and report actual latency. Add load testing results for dashboard endpoints. Include a system architecture diagram showing component interactions and data flow.
+17.2 Functionality & Feasibility -- Current Score: 4/5
+Strengths: The tool choices (FastAPI, NetworkX, pandas, D3) are standard, well-documented, and appropriate. The roadmap is phased with clear milestones. AI augments instructor judgment without replacing it. Risks are identified with concrete mitigations.
+Gap: The LLM-assisted tagging (Phase 2) lacks detail on model selection, cost, and accuracy expectations. The feasibility of the graph editor UX for non-technical instructors is unvalidated.
+To reach 5/5: Specify the LLM integration: which model, prompt structure, expected accuracy, and fallback behavior. Add a usability plan for the graph editor (e.g., user testing with 3-5 instructors during Phase 1). Detail the Canvas API integration requirements and limitations.
+17.3 Presentation -- Current Score: 4/5
+Strengths: The document is well-structured with clear sections, tables, and logical flow. Technical content is accessible. The tagline and positioning are sharp.
+Gap: No visual mockups, wireframes, or architecture diagrams are included. The narrative could be stronger with a concrete walkthrough scenario.
+To reach 5/5: Add wireframe mockups for the instructor dashboard and student report. Include a system architecture diagram. Add a concrete end-to-end scenario walkthrough (e.g., "Professor X teaches Calculus I to 800 students. After Exam 2, she uploads scores and discovers that...").
+17.4 Business Relevance -- Current Score: 4/5
+Strengths: Clear buyer personas. Revenue model with four pricing tiers. Quantitative KPIs. Go-to-market strategy. Strong differentiation from existing LMS tools.
+Gap: No competitive landscape analysis with named competitors. No market size estimation. Pricing is not yet validated.
+To reach 5/5: Add a competitive matrix comparing ConceptLens to specific tools (e.g., Canvas Analytics, Gradescope, Knewton). Estimate the addressable market (number of R1 universities, STEM gateway course count, potential revenue). Include a pricing validation plan (instructor interviews or willingness-to-pay survey).
+17.5 Customer Value & Impact -- Current Score: 5/5
+Strengths: The problem is sharply defined with a clear structural argument (question-centric vs. concept-centric). Personas include specific workflows and contexts. Pain points are real and validated by the widespread dissatisfaction with LMS analytics. Ethical safeguards are deeply integrated: no ranking, no demographics, no automated decisions, confidence bands everywhere, full instructor control.
+No major gap. This section is strong. Minor improvement: add a direct quote or anecdote from an instructor interview to ground the persona.
+17.6 Innovation & Originality -- Current Score: 4/5
+Strengths: Dependency-aware readiness inference is genuinely novel in the EdTech assessment space. The upstream penalty and downstream boost mechanism is a meaningful contribution. Root-cause waterfall tracing is a new visualization paradigm. The combination of instructor intelligence and student metacognition in one platform is rare.
+Gap: The novelty could be better justified with references to related work in educational data mining and knowledge tracing. The PRD does not position ConceptLens relative to academic research (e.g., Bayesian Knowledge Tracing, Item Response Theory).
+To reach 5/5: Add a brief related work section that positions ConceptLens relative to BKT, IRT, and Knowledge Space Theory. Explain why ConceptLens is a practical alternative (no learner modeling assumptions, no training data required, works from a single exam). This strengthens the innovation claim by showing awareness of the research landscape.
+17.7 Score Summary
+Criteria
+Current Score
+Target
+Key Action to Reach 5
+Technical Architecture
+4
+5
+Benchmark the inference engine on synthetic data at target scale
+Functionality & Feasibility
+4
+5
+Detail LLM integration and validate graph editor usability
+Presentation
+4
+5
+Add wireframes, architecture diagram, and scenario walkthrough
+Business Relevance
+4
+5
+Add named competitor analysis and market size estimation
+Customer Value & Impact
+5
+5
+Strong as-is; minor: add instructor interview anecdote
+Innovation & Originality
+4
+5
+Position relative to BKT, IRT, and Knowledge Space Theory
+
+
+Current Total: 25/30
+Path to 30/30: Execute the six actions listed above. The most impactful are (1) benchmarking the inference engine, (2) adding wireframes and an architecture diagram, and (3) adding a related work section to strengthen the innovation claim. These are all achievable within the current scope and do not require additional features.
+
