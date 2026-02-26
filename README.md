@@ -2,6 +2,8 @@
 
 AI-powered concept readiness analysis platform for instructors and students.
 
+**[Watch demo](PreReqDemo.mov)**
+
 ## Quick Start
 
 ### Prerequisites
