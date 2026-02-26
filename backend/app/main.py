@@ -104,6 +104,17 @@ app.include_router(export.router)
 app.include_router(chat.router)
 
 
+@app.get("/", tags=["Root"])
+async def root():
+    """Simple root endpoint for tunnel and uptime checks."""
+    return {
+        "service": "PreReq API",
+        "status": "ok",
+        "docs": "/docs",
+        "health": "/health",
+    }
+
+
 # ---------------------------------------------------------------------------
 # Health check with dependency probes
 # ---------------------------------------------------------------------------

@@ -2,7 +2,9 @@
 
 AI-powered concept readiness analysis platform for instructors and students.
 
-**[Watch demo](PreReqDemo.mov)**
+<video src="https://raw.githubusercontent.com/ayushmk7/PreReq/master/PreReqDemo.mov" controls width="100%">
+  Your browser does not support the video tag. [Download the demo](PreReqDemo.mov).
+</video>
 
 ## Quick Start
 
