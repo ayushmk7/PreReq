@@ -373,7 +373,7 @@ The backend currently exposes these route groups:
 - `/api/v1/exams/{exam_id}/ai/draft-interventions`
 - `/api/v1/exams/{exam_id}/ai/suggestions`
 - `/api/v1/exams/{exam_id}/export`
-- `/chat/*`
+- `/chat/`*
 - `/health`
 
 Future features should extend existing domains before adding parallel, inconsistent API hierarchies.
@@ -807,3 +807,4 @@ This document is successful if:
 - a future LLM can draft a feature PRD without inventing basic architecture,
 - current implementation details are distinguishable from aspirational roadmap items,
 - and core system rules around readiness, graph validity, AI review, and student-safe outputs remain explicit.
+
